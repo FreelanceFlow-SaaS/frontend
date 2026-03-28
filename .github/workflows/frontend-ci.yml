@@ -85,7 +85,7 @@ jobs:
 
       - name: Build and push
         env:
-          IMAGE_BASE: ghcr.io/${{ github.repository }}-frontend
+          IMAGE_BASE: ghcr.io/${{ github.repository }}
         run: |
           IMAGE_LOWER=$(echo "$IMAGE_BASE" | tr '[:upper:]' '[:lower:]')
           docker build -t "${IMAGE_LOWER}:${GITHUB_SHA}" -t "${IMAGE_LOWER}:latest" -f Dockerfile .
