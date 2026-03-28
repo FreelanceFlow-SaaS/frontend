@@ -1,10 +1,12 @@
 # Frontend CI/CD — Next.js app at repo root.
 # Branch flow: feature/* → develop → staging → main (see README.md).
 #
-# Vercel — même projet pour staging + prod (cas par défaut) :
-#   Secrets repo : VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
-#   main → --prod (URL + variables « Production » sur Vercel)
-#   staging → Preview (autre URL + variables « Preview » sur Vercel)
+# Vercel — même projet pour staging + prod :
+#   Secrets VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID doivent être accessibles au job.
+#   Soit secrets du dépôt (Settings → Secrets → Actions), soit dupliqués dans chaque
+#   environnement GitHub utilisé ci‑dessous. Un secret défini seulement dans un env nommé
+#   « global » n’est visible que si le job déclare environment: global (pas staging/prod).
+#   main → --prod ; staging → Preview sur Vercel.
 
 name: Frontend CI
 
@@ -100,7 +102,7 @@ jobs:
       github.event_name == 'push' &&
       github.event.repository.fork == false &&
       (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main')
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' || 'global' }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
