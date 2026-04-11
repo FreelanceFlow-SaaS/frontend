@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -58,33 +59,29 @@ function paintDom(theme: ThemeId, appearance: AppearanceId) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeId>(DEFAULT_THEME);
-  const [appearance, setAppearanceState] = useState<AppearanceId>(DEFAULT_APPEARANCE);
-  const [hydrated, setHydrated] = useState(false);
+  const [theme, setThemeState] = useState<ThemeId>(() =>
+    typeof window !== "undefined" ? readStoredTheme() : DEFAULT_THEME,
+  );
+  const [appearance, setAppearanceState] = useState<AppearanceId>(() =>
+    typeof window !== "undefined" ? readStoredAppearance() : DEFAULT_APPEARANCE,
+  );
 
-  useEffect(() => {
-    const t = readStoredTheme();
-    const a = readStoredAppearance();
-    setThemeState(t);
-    setAppearanceState(a);
-    paintDom(t, a);
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
+  useLayoutEffect(() => {
     paintDom(theme, appearance);
+  }, [theme, appearance]);
+
+  useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     window.localStorage.setItem(APPEARANCE_STORAGE_KEY, appearance);
-  }, [theme, appearance, hydrated]);
+  }, [theme, appearance]);
 
   useEffect(() => {
-    if (!hydrated || appearance !== "system") return;
+    if (appearance !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => paintDom(theme, appearance);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
-  }, [appearance, theme, hydrated]);
+  }, [appearance, theme]);
 
   const setTheme = useCallback((t: ThemeId) => {
     setThemeState(t);
