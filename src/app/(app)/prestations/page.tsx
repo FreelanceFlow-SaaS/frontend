@@ -1,10 +1,16 @@
-export default function PrestationsPlaceholderPage() {
+import { Suspense } from "react";
+import { ServicesList } from "@/modules/services/components/services-list";
+
+export default function PrestationsPage() {
   return (
-    <div className="p-8">
-      <h1 className="text-xl font-semibold text-foreground">Prestations</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Catalogue des prestations — à venir (Epic 3).
-      </p>
-    </div>
+    <Suspense
+      fallback={
+        <div className="p-8 text-sm text-muted-foreground" aria-live="polite">
+          Chargement…
+        </div>
+      }
+    >
+      <ServicesList />
+    </Suspense>
   );
 }
