@@ -81,7 +81,11 @@ export function ProfileForm() {
     };
   }, []);
 
-  function field<K extends keyof FreelancerProfileDto>(key: K, label: string, opts?: { type?: string }) {
+  function field<K extends keyof FreelancerProfileDto>(
+    key: K,
+    label: string,
+    opts?: { type?: string },
+  ) {
     const id = `${formId}-${String(key)}`;
     return (
       <div className="grid gap-2" key={String(key)}>
@@ -115,7 +119,9 @@ export function ProfileForm() {
     const postalCode = values.postalCode.trim();
     const city = values.city.trim();
     if (!displayName || !legalName || !addressLine1 || !postalCode || !city) {
-      setError("Renseignez au minimum le nom affiché, le nom légal, l’adresse, le code postal et la ville.");
+      setError(
+        "Renseignez au minimum le nom affiché, le nom légal, l’adresse, le code postal et la ville.",
+      );
       return;
     }
     setSaving(true);

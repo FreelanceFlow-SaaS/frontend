@@ -2,7 +2,10 @@
  * Maps Nest Golden Rule error payloads to a short French message for the UI.
  * Backend already returns many messages in French; this normalizes shape and fallbacks.
  */
-export function mapApiErrorToMessage(body: unknown, fallback = "Une erreur est survenue. Réessayez."): string {
+export function mapApiErrorToMessage(
+  body: unknown,
+  fallback = "Une erreur est survenue. Réessayez.",
+): string {
   if (!body || typeof body !== "object") return fallback;
   const o = body as Record<string, unknown>;
 

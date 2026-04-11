@@ -23,7 +23,10 @@ describe("AppShell", () => {
     expect(screen.getByRole("navigation", { name: /navigation principale/i })).toBeInTheDocument();
     expect(screen.getByRole("main")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^factures$/i })).toHaveAttribute("href", "/factures");
-    expect(screen.getByRole("link", { name: /profil vendeur/i })).toHaveAttribute("href", "/profil-vendeur");
+    expect(screen.getByRole("link", { name: /profil vendeur/i })).toHaveAttribute(
+      "href",
+      "/profil-vendeur",
+    );
     expect(screen.getByRole("button", { name: /déconnexion/i })).toBeInTheDocument();
   });
 });

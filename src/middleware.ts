@@ -6,7 +6,9 @@ const PROTECTED_PREFIXES = ["/factures", "/clients", "/prestations", "/profil-ve
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const isProtected = PROTECTED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
   if (!isProtected) {
     return NextResponse.next();
   }

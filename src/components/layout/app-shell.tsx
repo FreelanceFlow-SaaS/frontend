@@ -63,7 +63,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </ul>
         <div className="mt-auto pt-6">
-          <Button type="button" variant="outline" className="w-full" onClick={() => void handleSignOut()}>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => void handleSignOut()}
+          >
             Déconnexion
           </Button>
         </div>
