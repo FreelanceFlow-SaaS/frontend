@@ -15,6 +15,8 @@ on:
     branches: [develop, main, staging]
   push:
     branches: [develop, staging, main]
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
@@ -60,7 +62,7 @@ jobs:
     if: >
       github.event_name == 'push' &&
       github.event.repository.fork == false &&
-      (github.ref == 'refs/heads/staging')
+      (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
 
@@ -74,7 +76,7 @@ jobs:
     if: >
       github.event_name == 'push' &&
       github.event.repository.fork == false &&
-      (github.ref == 'refs/heads/staging')
+      (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/v'))
     steps:
       - uses: actions/checkout@v4
 
@@ -85,14 +87,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Resolve image tags
+        id: meta
         env:
           IMAGE_BASE: ghcr.io/${{ github.repository }}
         run: |
           IMAGE_LOWER=$(echo "$IMAGE_BASE" | tr '[:upper:]' '[:lower:]')
-          docker build -t "${IMAGE_LOWER}:${GITHUB_SHA}" -t "${IMAGE_LOWER}:latest" -f Dockerfile .
-          docker push "${IMAGE_LOWER}:${GITHUB_SHA}"
-          docker push "${IMAGE_LOWER}:latest"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+            echo "tags=${IMAGE_LOWER}:${VERSION},${IMAGE_LOWER}:latest" >> $GITHUB_OUTPUT
+          else
+            echo "tags=${IMAGE_LOWER}:${GITHUB_SHA},${IMAGE_LOWER}:latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push
+        run: |
+          IFS=',' read -ra TAGS <<< "${{ steps.meta.outputs.tags }}"
+          BUILD_ARGS=""
+          for TAG in "${TAGS[@]}"; do BUILD_ARGS="$BUILD_ARGS -t $TAG"; done
+          docker build $BUILD_ARGS -f Dockerfile .
+          for TAG in "${TAGS[@]}"; do docker push "$TAG"; done
 
   deploy-vercel:
     name: Deploy to Vercel
@@ -101,8 +115,8 @@ jobs:
     if: >
       github.event_name == 'push' &&
       github.event.repository.fork == false &&
-      (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/main')
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' || 'global' }}
+      (github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/v'))
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -112,7 +126,7 @@ jobs:
       - name: Deploy to Vercel
         run: |
           set -euo pipefail
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             npx vercel@latest deploy --yes --token "${{ secrets.VERCEL_TOKEN }}" --prod
           else
             npx vercel@latest deploy --yes --token "${{ secrets.VERCEL_TOKEN }}"
