@@ -16,6 +16,13 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## API (NestJS)
+
+The browser calls the **FreelanceFlow Nest API** directly with `fetch` and `credentials: "include"` so HttpOnly refresh cookies (`refreshToken`) are stored for `http://localhost:3001`. CORS on the API must allow `http://localhost:3000` (see `FRONTEND_URL` in the backend).
+
+- Configure the API root with `NEXT_PUBLIC_API_URL` (see [`.env.example`](./.env.example)). Default: `http://localhost:3001/api/v1`.
+- The SPA stores the JWT access token in `localStorage` and mirrors it in a **non-HttpOnly** cookie `ff_access_token` so Next.js middleware can gate routes; use a stricter strategy in production if you move to a BFF.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
