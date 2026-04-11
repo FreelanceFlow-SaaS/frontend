@@ -1,8 +1,16 @@
-export default function ClientsPlaceholderPage() {
+import { Suspense } from "react";
+import { ClientsList } from "@/modules/clients/components/clients-list";
+
+export default function ClientsPage() {
   return (
-    <div className="p-8">
-      <h1 className="text-xl font-semibold text-foreground">Clients</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Annuaire clients — à venir (Epic 2).</p>
-    </div>
+    <Suspense
+      fallback={
+        <div className="p-8 text-sm text-muted-foreground" aria-live="polite">
+          Chargement…
+        </div>
+      }
+    >
+      <ClientsList />
+    </Suspense>
   );
 }
