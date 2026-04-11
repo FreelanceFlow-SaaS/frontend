@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyDisplay } from "@/components/shared/money-display";
+import { DeleteInvoiceDialog } from "@/modules/invoices/components/delete-invoice-dialog";
 import { InvoiceLinesEditor } from "@/modules/invoices/components/invoice-lines-editor";
+import { InvoiceStatusActions } from "@/modules/invoices/components/invoice-status-actions";
 import { InvoiceTotalsPanel } from "@/modules/invoices/components/invoice-totals-panel";
 import { fetchInvoice, updateInvoice, type InvoiceDto } from "@/lib/api/invoices-api";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
@@ -130,12 +132,23 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
               Client : {invoice.client.name} — {invoice.client.email}
             </p>
           </div>
-          <p className="text-sm text-foreground">
-            <span className="sr-only">Statut : </span>
-            <span className="inline-flex rounded-md border border-border bg-muted/40 px-2 py-1 font-medium">
-              {invoiceStatusLabel(invoice.status)}
-            </span>
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {invoice.status === "draft" || invoice.status === "cancelled" ? (
+              <DeleteInvoiceDialog
+                invoiceId={invoice.id}
+                invoiceNumber={invoice.invoiceNumber}
+                onDeleted={() => {
+                  router.push("/factures?deleted=1");
+                }}
+              />
+            ) : null}
+            <p className="text-sm text-foreground">
+              <span className="sr-only">Statut : </span>
+              <span className="inline-flex rounded-md border border-border bg-muted/40 px-2 py-1 font-medium">
+                {invoiceStatusLabel(invoice.status)}
+              </span>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -150,6 +163,17 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
+
+      <div className="mb-8">
+        <InvoiceStatusActions
+          invoice={invoice}
+          onUpdated={(inv) => {
+            setInvoice(inv);
+            setNotice("Statut mis à jour.");
+            setError(null);
+          }}
+        />
+      </div>
 
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_16rem] lg:items-start lg:gap-8">
         <div className="min-w-0 space-y-8">

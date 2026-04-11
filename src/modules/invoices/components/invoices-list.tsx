@@ -58,8 +58,10 @@ export function InvoicesList() {
 
   useEffect(() => {
     const created = searchParams.get("created");
+    const deleted = searchParams.get("deleted");
     if (created) setNotice("Facture créée. Vous pouvez compléter les lignes si besoin.");
-    if (created) {
+    if (deleted) setNotice("Facture supprimée.");
+    if (created || deleted) {
       router.replace("/factures", { scroll: false });
     }
   }, [searchParams, router]);
