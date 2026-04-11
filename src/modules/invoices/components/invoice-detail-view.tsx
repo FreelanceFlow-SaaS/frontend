@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyDisplay } from "@/components/shared/money-display";
+import { InvoiceLinesEditor } from "@/modules/invoices/components/invoice-lines-editor";
 import { InvoiceTotalsPanel } from "@/modules/invoices/components/invoice-totals-panel";
 import { fetchInvoice, updateInvoice, type InvoiceDto } from "@/lib/api/invoices-api";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
@@ -199,66 +200,75 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
             <h2 id="invoice-lines-heading" className="text-sm font-semibold text-foreground">
               Lignes
             </h2>
-            {!isDraft ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Cette facture n&apos;est plus en brouillon : les lignes ne sont plus modifiables.
-              </p>
+            {isDraft ? (
+              <div className="mt-4">
+                <InvoiceLinesEditor
+                  invoiceId={invoice.id}
+                  lines={invoice.lines}
+                  onSaved={(inv) => {
+                    setInvoice(inv);
+                    setNotice("Lignes enregistrées.");
+                    setError(null);
+                  }}
+                />
+              </div>
             ) : (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Les montants des lignes sont figés par le serveur après enregistrement. Les
-                prestations choisies sont copiées au moment de la sauvegarde (snapshot) — une
-                évolution ultérieure du catalogue ne modifie pas les factures passées.
-              </p>
+              <>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Cette facture n&apos;est plus en brouillon : les lignes ne sont plus modifiables.
+                  Les montants affichés proviennent du serveur.
+                </p>
+                <div className="mt-4 overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full min-w-[36rem] text-left text-sm">
+                    <caption className="sr-only">Lignes de facture</caption>
+                    <thead className="border-b border-border bg-muted/50">
+                      <tr>
+                        <th scope="col" className="px-3 py-2 font-medium">
+                          #
+                        </th>
+                        <th scope="col" className="px-3 py-2 font-medium">
+                          Description
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-right font-medium tabular-nums">
+                          Qté
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-right font-medium tabular-nums">
+                          PU HT
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-right font-medium">
+                          TVA
+                        </th>
+                        <th scope="col" className="px-3 py-2 text-right font-medium tabular-nums">
+                          TTC
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedLines.map((line) => (
+                        <tr key={line.id} className="border-b border-border last:border-0">
+                          <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                            {line.lineOrder}
+                          </td>
+                          <td className="px-3 py-2">{line.description}</td>
+                          <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                            {String(line.quantity).replace(".", ",")}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <MoneyDisplay amount={line.unitPriceHt} />
+                          </td>
+                          <td className="px-3 py-2 text-right text-muted-foreground">
+                            {formatVatRatePct(line.vatRate)}
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium">
+                            <MoneyDisplay amount={line.lineTtc} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
-            <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[36rem] text-left text-sm">
-                <caption className="sr-only">Lignes de facture</caption>
-                <thead className="border-b border-border bg-muted/50">
-                  <tr>
-                    <th scope="col" className="px-3 py-2 font-medium">
-                      #
-                    </th>
-                    <th scope="col" className="px-3 py-2 font-medium">
-                      Description
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium tabular-nums">
-                      Qté
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium tabular-nums">
-                      PU HT
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">
-                      TVA
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium tabular-nums">
-                      TTC
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedLines.map((line) => (
-                    <tr key={line.id} className="border-b border-border last:border-0">
-                      <td className="px-3 py-2 tabular-nums text-muted-foreground">
-                        {line.lineOrder}
-                      </td>
-                      <td className="px-3 py-2">{line.description}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                        {String(line.quantity).replace(".", ",")}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <MoneyDisplay amount={line.unitPriceHt} />
-                      </td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">
-                        {formatVatRatePct(line.vatRate)}
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium">
-                        <MoneyDisplay amount={line.lineTtc} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </section>
         </div>
 
