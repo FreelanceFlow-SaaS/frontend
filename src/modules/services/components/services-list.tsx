@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,11 @@ import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
 function TableSkeleton() {
   return (
-    <div className="space-y-2 p-8" aria-busy="true" aria-label="Chargement de la liste des prestations">
+    <div
+      className="space-y-2 p-8"
+      aria-busy="true"
+      aria-label="Chargement de la liste des prestations"
+    >
       {[1, 2, 3].map((i) => (
         <div key={i} className="h-12 animate-pulse rounded-md bg-muted" />
       ))}
@@ -20,9 +25,22 @@ function TableSkeleton() {
 }
 
 export function ServicesList() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [services, setServices] = useState<ServiceDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const created = searchParams.get("created");
+    const updated = searchParams.get("updated");
+    if (created) setNotice("Prestation créée avec succès.");
+    else if (updated) setNotice("Prestation mise à jour.");
+    if (created || updated) {
+      router.replace("/prestations", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const load = useCallback(async (): Promise<void> => {
     const token = getAccessTokenFromStorage();
@@ -62,6 +80,12 @@ export function ServicesList() {
           <Link href="/prestations/new">Ajouter une prestation</Link>
         </Button>
       </div>
+
+      {notice ? (
+        <Alert className="mb-6" role="status">
+          <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {error ? (
         <Alert variant="destructive" className="mb-6" role="alert">
