@@ -16,9 +16,7 @@ type SortMode = "date" | "status";
 function sortInvoices(rows: InvoiceDto[], mode: SortMode): InvoiceDto[] {
   const copy = [...rows];
   if (mode === "date") {
-    copy.sort(
-      (a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime(),
-    );
+    copy.sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
   } else {
     const order: Record<string, number> = {
       draft: 0,
@@ -37,7 +35,11 @@ function sortInvoices(rows: InvoiceDto[], mode: SortMode): InvoiceDto[] {
 
 function TableSkeleton() {
   return (
-    <div className="space-y-2 p-8" aria-busy="true" aria-label="Chargement de la liste des factures">
+    <div
+      className="space-y-2 p-8"
+      aria-busy="true"
+      aria-label="Chargement de la liste des factures"
+    >
       {[1, 2, 3].map((i) => (
         <div key={i} className="h-12 animate-pulse rounded-md bg-muted" />
       ))}
@@ -103,7 +105,10 @@ export function InvoicesList() {
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
-            <label htmlFor="invoice-sort" className="text-sm text-muted-foreground whitespace-nowrap">
+            <label
+              htmlFor="invoice-sort"
+              className="text-sm text-muted-foreground whitespace-nowrap"
+            >
               Trier par
             </label>
             <select
