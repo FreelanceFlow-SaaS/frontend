@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/shared/money-display";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
+import { DeleteServiceDialog } from "@/modules/services/components/delete-service-dialog";
 import { fetchServices, type ServiceDto } from "@/lib/api/services-api";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
@@ -35,9 +36,11 @@ export function ServicesList() {
   useEffect(() => {
     const created = searchParams.get("created");
     const updated = searchParams.get("updated");
+    const deleted = searchParams.get("deleted");
     if (created) setNotice("Prestation créée avec succès.");
     else if (updated) setNotice("Prestation mise à jour.");
-    if (created || updated) {
+    else if (deleted) setNotice("Prestation supprimée.");
+    if (created || updated || deleted) {
       router.replace("/prestations", { scroll: false });
     }
   }, [searchParams, router]);
@@ -147,9 +150,21 @@ export function ServicesList() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/prestations/${s.id}/edit`}>Modifier</Link>
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/prestations/${s.id}/edit`}>Modifier</Link>
+                      </Button>
+                      <DeleteServiceDialog
+                        serviceId={s.id}
+                        serviceTitle={s.title}
+                        onDeleted={() => {
+                          void (async () => {
+                            await load();
+                            router.push("/prestations?deleted=1");
+                          })();
+                        }}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
