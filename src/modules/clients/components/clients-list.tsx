@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
+import { DeleteClientDialog } from "@/modules/clients/components/delete-client-dialog";
 import { fetchClients, type ClientDto } from "@/lib/api/clients-api";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
@@ -138,9 +139,21 @@ export function ClientsList() {
                   <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
                   <td className="px-4 py-3 text-muted-foreground">{c.company}</td>
                   <td className="px-4 py-3 text-right">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/clients/${c.id}/edit`}>Modifier</Link>
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/clients/${c.id}/edit`}>Modifier</Link>
+                      </Button>
+                      <DeleteClientDialog
+                        clientId={c.id}
+                        clientName={c.name}
+                        onDeleted={() => {
+                          void (async () => {
+                            await load();
+                            router.push("/clients?deleted=1");
+                          })();
+                        }}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
