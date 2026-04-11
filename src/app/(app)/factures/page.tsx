@@ -1,8 +1,16 @@
-export default function FacturesPlaceholderPage() {
+import { Suspense } from "react";
+import { InvoicesList } from "@/modules/invoices/components/invoices-list";
+
+export default function FacturesPage() {
   return (
-    <div className="p-8">
-      <h1 className="text-xl font-semibold text-foreground">Factures</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Liste des factures — à venir (Epic 4).</p>
-    </div>
+    <Suspense
+      fallback={
+        <div className="p-8 text-sm text-muted-foreground" aria-live="polite">
+          Chargement…
+        </div>
+      }
+    >
+      <InvoicesList />
+    </Suspense>
   );
 }
