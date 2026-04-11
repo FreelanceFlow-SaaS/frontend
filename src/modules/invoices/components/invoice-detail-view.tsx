@@ -11,6 +11,7 @@ import { MoneyDisplay } from "@/components/shared/money-display";
 import { DeleteInvoiceDialog } from "@/modules/invoices/components/delete-invoice-dialog";
 import { InvoiceLinesEditor } from "@/modules/invoices/components/invoice-lines-editor";
 import { InvoiceStatusActions } from "@/modules/invoices/components/invoice-status-actions";
+import { InvoicePdfActions } from "@/modules/invoices/components/invoice-pdf-actions";
 import { InvoiceTotalsPanel } from "@/modules/invoices/components/invoice-totals-panel";
 import { fetchInvoice, updateInvoice, type InvoiceDto } from "@/lib/api/invoices-api";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
@@ -296,11 +297,14 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
           </section>
         </div>
 
-        <InvoiceTotalsPanel
-          totalHt={invoice.totalHt}
-          totalVat={invoice.totalVat}
-          totalTtc={invoice.totalTtc}
-        />
+        <div className="flex flex-col gap-6">
+          <InvoiceTotalsPanel
+            totalHt={invoice.totalHt}
+            totalVat={invoice.totalVat}
+            totalTtc={invoice.totalTtc}
+          />
+          <InvoicePdfActions invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber} />
+        </div>
       </div>
     </div>
   );
