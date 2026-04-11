@@ -1,10 +1,24 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { Suspense } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { ClientsList } from "@/modules/clients/components/clients-list";
 
 vi.mock("@/lib/auth/session", () => ({
   getAccessTokenFromStorage: vi.fn(() => "test-token"),
 }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+function renderClientsList() {
+  return render(
+    <Suspense fallback={null}>
+      <ClientsList />
+    </Suspense>,
+  );
+}
 
 describe("ClientsList", () => {
   const originalFetch = global.fetch;
@@ -24,7 +38,7 @@ describe("ClientsList", () => {
       text: async () => "[]",
     } as Response);
 
-    render(<ClientsList />);
+    renderClientsList();
 
     await waitFor(() => {
       expect(
@@ -51,7 +65,7 @@ describe("ClientsList", () => {
       text: async () => JSON.stringify(clients),
     } as Response);
 
-    render(<ClientsList />);
+    renderClientsList();
 
     await waitFor(() => {
       expect(screen.getByRole("link", { name: /^acme$/i })).toHaveAttribute(

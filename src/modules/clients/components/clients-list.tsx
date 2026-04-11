@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,26 @@ function TableSkeleton() {
 }
 
 export function ClientsList() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    const created = searchParams.get("created");
+    const updated = searchParams.get("updated");
+    const deleted = searchParams.get("deleted");
+    if (created) setNotice("Client créé avec succès.");
+    else if (updated) setNotice("Client mis à jour.");
+    else if (deleted) setNotice("Client supprimé.");
+    if (created || updated || deleted) {
+      router.replace("/clients", { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  const load = useCallback(async (): Promise<void> => {
     const token = getAccessTokenFromStorage();
     if (!token) {
       setError("Session expirée. Reconnectez-vous.");
@@ -61,6 +77,12 @@ export function ClientsList() {
           <Link href="/clients/new">Ajouter un client</Link>
         </Button>
       </div>
+
+      {notice ? (
+        <Alert className="mb-6" role="status">
+          <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {error ? (
         <Alert variant="destructive" className="mb-6" role="alert">
