@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchClients } from "@/lib/api/clients-api";
-import { createInvoice } from "@/lib/api/invoices-api";
+import { createInvoice, type CreateInvoiceLinePayload } from "@/lib/api/invoices-api";
 import { fetchSellerProfile } from "@/lib/api/profile-api";
+import { fetchServices, type ServiceDto } from "@/lib/api/services-api";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
 function todayIsoDate(): string {
@@ -46,6 +47,19 @@ function parseVatRate(input: string): { ok: true; value: number } | { ok: false;
   return { ok: true, value: n };
 }
 
+type NewLine = {
+  key: string;
+  serviceId: string;
+  quantity: string;
+  vatRate: string;
+};
+
+function serviceRateToNumber(rate: ServiceDto["hourlyRateHt"]): number | null {
+  const n = typeof rate === "number" ? rate : Number(String(rate).replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 100) / 100;
+}
+
 export function CreateInvoiceForm() {
   const router = useRouter();
   const formId = useId();
@@ -56,15 +70,22 @@ export function CreateInvoiceForm() {
   const [error, setError] = useState<string | null>(null);
 
   const [clientOptions, setClientOptions] = useState<{ id: string; name: string }[]>([]);
+  const [services, setServices] = useState<ServiceDto[]>([]);
   const [profileOk, setProfileOk] = useState(false);
 
   const [clientId, setClientId] = useState("");
   const [issueDate, setIssueDate] = useState(todayIsoDate);
   const [dueDate, setDueDate] = useState("");
-  const [lineDescription, setLineDescription] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [unitPriceHt, setUnitPriceHt] = useState("");
-  const [vatRate, setVatRate] = useState("0,20");
+
+  const [lines, setLines] = useState<NewLine[]>([
+    { key: `new-${Date.now()}`, serviceId: "", quantity: "1", vatRate: "0,20" },
+  ]);
+
+  const servicesById = useMemo(() => {
+    const m = new Map<string, ServiceDto>();
+    for (const s of services) m.set(s.id, s);
+    return m;
+  }, [services]);
 
   useEffect(() => {
     const token = getAccessTokenFromStorage();
@@ -76,7 +97,11 @@ export function CreateInvoiceForm() {
     let cancelled = false;
     (async () => {
       try {
-        const [user, clients] = await Promise.all([fetchSellerProfile(token), fetchClients(token)]);
+        const [user, clients, svc] = await Promise.all([
+          fetchSellerProfile(token),
+          fetchClients(token),
+          fetchServices(token),
+        ]);
         if (cancelled) return;
         const p = user.profile;
         const ok =
@@ -87,6 +112,7 @@ export function CreateInvoiceForm() {
           Boolean(p?.city?.trim());
         setProfileOk(ok);
         setClientOptions(clients.map((c) => ({ id: c.id, name: c.name })));
+        setServices(svc);
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Chargement impossible.");
@@ -99,6 +125,22 @@ export function CreateInvoiceForm() {
       cancelled = true;
     };
   }, []);
+
+  function addLine() {
+    setLines((prev) => [
+      ...prev,
+      {
+        key: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        serviceId: "",
+        quantity: "1",
+        vatRate: "0,20",
+      },
+    ]);
+  }
+
+  function removeLine(index: number) {
+    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -116,25 +158,42 @@ export function CreateInvoiceForm() {
       setError("Choisissez un client.");
       return;
     }
-    const desc = lineDescription.trim();
-    if (!desc) {
-      setError("La description de la ligne est obligatoire.");
-      return;
-    }
-    const q = parsePositiveDecimal(quantity, "La quantité");
-    if (!q.ok) {
-      setError(q.message);
-      return;
-    }
-    const unit = parsePositiveDecimal(unitPriceHt, "Le prix unitaire HT");
-    if (!unit.ok) {
-      setError(unit.message);
-      return;
-    }
-    const vat = parseVatRate(vatRate);
-    if (!vat.ok) {
-      setError(vat.message);
-      return;
+
+    const payloadLines: CreateInvoiceLinePayload[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (!l.serviceId) {
+        setError(`Ligne ${i + 1} : choisissez une prestation.`);
+        return;
+      }
+      const svc = servicesById.get(l.serviceId);
+      if (!svc) {
+        setError(`Ligne ${i + 1} : prestation introuvable (rafraîchissez la page).`);
+        return;
+      }
+      const q = parsePositiveDecimal(l.quantity, `Ligne ${i + 1} — quantité`);
+      if (!q.ok) {
+        setError(q.message);
+        return;
+      }
+      const vat = parseVatRate(l.vatRate);
+      if (!vat.ok) {
+        setError(vat.message);
+        return;
+      }
+      const rate = serviceRateToNumber(svc.hourlyRateHt);
+      if (rate === null) {
+        setError(`Ligne ${i + 1} : tarif de prestation invalide.`);
+        return;
+      }
+      payloadLines.push({
+        lineOrder: i + 1,
+        serviceId: svc.id,
+        description: svc.title,
+        quantity: q.value,
+        unitPriceHt: rate,
+        vatRate: vat.value,
+      });
     }
 
     setSaving(true);
@@ -143,15 +202,7 @@ export function CreateInvoiceForm() {
         clientId,
         issueDate,
         ...(dueDate ? { dueDate } : {}),
-        lines: [
-          {
-            lineOrder: 1,
-            description: desc,
-            quantity: q.value,
-            unitPriceHt: unit.value,
-            vatRate: vat.value,
-          },
-        ],
+        lines: payloadLines,
       });
       await router.refresh();
       router.push(`/factures/${inv.id}?created=1`);
@@ -167,14 +218,15 @@ export function CreateInvoiceForm() {
   }
 
   const blockSubmit = !profileOk || clientOptions.length === 0;
+  const blockLines = services.length === 0;
 
   return (
     <div className="mx-auto max-w-3xl p-8">
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-foreground">Nouvelle facture</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          L&apos;API exige au moins une ligne : vous pourrez la compléter ou en ajouter
-          d&apos;autres depuis la fiche facture (brouillon).
+          Ajoutez une ou plusieurs lignes basées sur vos prestations : le tarif est repris
+          automatiquement depuis la prestation sélectionnée.
         </p>
       </div>
 
@@ -198,6 +250,18 @@ export function CreateInvoiceForm() {
               client
             </Link>{" "}
             à facturer.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {services.length === 0 ? (
+        <Alert className="mb-4" role="status">
+          <AlertDescription>
+            Ajoutez d&apos;abord une{" "}
+            <Link href="/prestations/new" className="font-medium text-primary underline">
+              prestation
+            </Link>{" "}
+            pour facturer à partir d&apos;un tarif.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -252,57 +316,125 @@ export function CreateInvoiceForm() {
         </div>
 
         <fieldset className="rounded-lg border border-border p-4">
-          <legend className="px-1 text-sm font-medium text-foreground">Première ligne</legend>
-          <div className="mt-3 grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor={`${formId}-desc`}>Description</Label>
-              <Input
-                id={`${formId}-desc`}
-                value={lineDescription}
-                onChange={(e) => setLineDescription(e.target.value)}
-                disabled={saving || blockSubmit}
-                placeholder="Ex. Développement — lot 1"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="grid gap-2">
-                <Label htmlFor={`${formId}-qty`}>Quantité</Label>
-                <Input
-                  id={`${formId}-qty`}
-                  inputMode="decimal"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  disabled={saving || blockSubmit}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor={`${formId}-unit`}>Prix unitaire HT (EUR)</Label>
-                <Input
-                  id={`${formId}-unit`}
-                  inputMode="decimal"
-                  value={unitPriceHt}
-                  onChange={(e) => setUnitPriceHt(e.target.value)}
-                  disabled={saving || blockSubmit}
-                  placeholder="ex. 150"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor={`${formId}-vat`}>TVA (0–1)</Label>
-                <Input
-                  id={`${formId}-vat`}
-                  inputMode="decimal"
-                  value={vatRate}
-                  onChange={(e) => setVatRate(e.target.value)}
-                  disabled={saving || blockSubmit}
-                  title="Ex. 0,20 pour 20 %"
-                />
-              </div>
-            </div>
+          <legend className="px-1 text-sm font-medium text-foreground">Lignes</legend>
+          <div className="mt-3 space-y-4">
+            {lines.map((line, index) => {
+              const svc = line.serviceId ? servicesById.get(line.serviceId) : undefined;
+              const rate = svc ? serviceRateToNumber(svc.hourlyRateHt) : null;
+              return (
+                <div
+                  key={line.key}
+                  className="relative rounded-md border border-border bg-card p-3"
+                  aria-label={`Ligne ${index + 1}`}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-2 h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                    onClick={() => removeLine(index)}
+                    disabled={saving || lines.length <= 1}
+                    aria-label={`Retirer la ligne ${index + 1}`}
+                    title={
+                      lines.length <= 1 ? "Au moins une ligne est requise." : "Retirer la ligne"
+                    }
+                  >
+                    <span aria-hidden="true" className="text-lg leading-none">
+                      ×
+                    </span>
+                  </Button>
+
+                  <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
+                    <div className="grid gap-2 sm:col-span-5">
+                      <Label htmlFor={`${formId}-svc-${index}`}>Prestation</Label>
+                      <select
+                        id={`${formId}-svc-${index}`}
+                        value={line.serviceId}
+                        onChange={(e) =>
+                          setLines((prev) => {
+                            const next = [...prev];
+                            next[index] = { ...next[index], serviceId: e.target.value };
+                            return next;
+                          })
+                        }
+                        disabled={saving || blockSubmit || blockLines}
+                        required
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <option value="">— Choisir —</option>
+                        {services.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid gap-2 sm:col-span-3">
+                      <Label htmlFor={`${formId}-qty-${index}`}>Quantité</Label>
+                      <Input
+                        id={`${formId}-qty-${index}`}
+                        inputMode="decimal"
+                        value={line.quantity}
+                        onChange={(e) =>
+                          setLines((prev) => {
+                            const next = [...prev];
+                            next[index] = { ...next[index], quantity: e.target.value };
+                            return next;
+                          })
+                        }
+                        disabled={saving || blockSubmit || blockLines}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid gap-2 sm:col-span-2">
+                      <Label htmlFor={`${formId}-vat-${index}`}>TVA (0–1)</Label>
+                      <Input
+                        id={`${formId}-vat-${index}`}
+                        inputMode="decimal"
+                        value={line.vatRate}
+                        onChange={(e) =>
+                          setLines((prev) => {
+                            const next = [...prev];
+                            next[index] = { ...next[index], vatRate: e.target.value };
+                            return next;
+                          })
+                        }
+                        disabled={saving || blockSubmit || blockLines}
+                        required
+                        title="Ex. 0,20 pour 20 %"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <div className="grid gap-1">
+                        <span className="text-xs text-muted-foreground">PU HT</span>
+                        <span className="tabular-nums text-sm text-foreground">
+                          {rate === null ? "—" : `${String(rate).replace(".", ",")} €`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addLine}
+              disabled={saving || blockSubmit || blockLines}
+            >
+              Ajouter une ligne
+            </Button>
           </div>
         </fieldset>
 
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={saving || blockSubmit}>
+          <Button type="submit" disabled={saving || blockSubmit || blockLines}>
             {saving ? "Création…" : "Créer le brouillon"}
           </Button>
           <Button type="button" variant="outline" asChild>
