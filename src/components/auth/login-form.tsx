@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { loginRequest } from "@/lib/auth/auth-api";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const emailId = useId();
   const passwordId = useId();
   const errorId = useId();
@@ -19,6 +20,13 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const from = searchParams.get("from");
+  const loggedOut = searchParams.get("loggedOut") === "1";
+  const showSessionNotice = Boolean(from) && !loggedOut;
+  const sessionMessage = loggedOut
+    ? "Vous avez été déconnecté."
+    : "Votre session a expiré ou vous devez vous connecter pour accéder à cette page.";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +52,12 @@ export function LoginForm() {
           Accédez à votre espace FreelanceFlow pour gérer vos factures.
         </p>
       </div>
+
+      {loggedOut || showSessionNotice ? (
+        <Alert role="status">
+          <AlertDescription>{sessionMessage}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {error ? (
         <Alert variant="destructive" id={errorId} role="alert">

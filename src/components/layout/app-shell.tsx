@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     clearAccessToken();
     await router.refresh();
-    router.push("/login");
+    router.push("/login?loggedOut=1");
   }
 
   return (

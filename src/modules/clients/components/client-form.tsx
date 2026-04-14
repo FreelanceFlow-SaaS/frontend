@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient, fetchClient, updateClient, type ClientPayload } from "@/lib/api/clients-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 type ClientFormProps = {
   mode: "create" | "edit";
@@ -109,8 +109,7 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
     if (mode !== "edit" || !clientId) return;
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
-      setLoading(false);
+      redirectToLogin();
       return;
     }
     let cancelled = false;
@@ -186,7 +185,7 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
     setFieldErrors({});
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
+      redirectToLogin();
       return;
     }
     const trimmed: ClientPayload = {

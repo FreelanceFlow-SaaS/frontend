@@ -13,7 +13,7 @@ import {
   updateService,
   type ServicePayload,
 } from "@/lib/api/services-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 type ServiceFormProps = {
   mode: "create" | "edit";
@@ -60,8 +60,7 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
     if (mode !== "edit" || !serviceId) return;
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
-      setLoading(false);
+      redirectToLogin();
       return;
     }
     let cancelled = false;
@@ -90,7 +89,7 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
     setError(null);
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
+      redirectToLogin();
       return;
     }
     const trimmedTitle = title.trim();

@@ -10,7 +10,7 @@ import {
   patchSellerProfile,
   type FreelancerProfileDto,
 } from "@/lib/api/profile-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 function emptyForm(): FreelancerProfileDto {
   return {
@@ -57,8 +57,7 @@ export function ProfileForm() {
   useEffect(() => {
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setLoading(false);
-      setError("Session expirée. Reconnectez-vous.");
+      redirectToLogin();
       return;
     }
     let cancelled = false;
@@ -110,7 +109,7 @@ export function ProfileForm() {
     setSuccess(null);
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
+      redirectToLogin();
       return;
     }
     const displayName = values.displayName.trim();
