@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { updateInvoiceStatus, type InvoiceDto, type InvoiceStatus } from "@/lib/api/invoices-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 import { invoiceStatusLabel } from "@/modules/invoices/utils/invoice-i18n";
 
 type TransitionOption = {
@@ -85,7 +85,7 @@ export function InvoiceStatusActions({ invoice, onUpdated }: InvoiceStatusAction
     if (!pending) return;
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée.");
+      redirectToLogin();
       return;
     }
     setLoading(true);

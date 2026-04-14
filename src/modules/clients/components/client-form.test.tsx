@@ -38,7 +38,7 @@ describe("ClientForm", () => {
           name: "Test",
           email: "t@test.fr",
           company: "Co",
-          address: "Addr",
+          address: "Addr\n75001 Paris\nFR",
         }),
     } as Response);
 
@@ -47,7 +47,11 @@ describe("ClientForm", () => {
     await user.type(screen.getByLabelText(/^nom$/i), "Test");
     await user.type(screen.getByLabelText(/^e-mail$/i), "t@test.fr");
     await user.type(screen.getByLabelText(/^entreprise$/i), "Co");
-    await user.type(screen.getByLabelText(/adresse complète/i), "Addr");
+    await user.type(screen.getByLabelText(/^adresse$/i), "Addr");
+    await user.type(screen.getByLabelText(/^code postal$/i), "75001");
+    await user.type(screen.getByLabelText(/^ville$/i), "Paris");
+    await user.clear(screen.getByLabelText(/^pays/i));
+    await user.type(screen.getByLabelText(/^pays/i), "FR");
 
     await user.click(screen.getByRole("button", { name: /créer le client/i }));
 
@@ -70,7 +74,9 @@ describe("ClientForm", () => {
     await user.type(screen.getByLabelText(/^nom$/i), "KeepMe");
     await user.type(screen.getByLabelText(/^e-mail$/i), "keep@x.fr");
     await user.type(screen.getByLabelText(/^entreprise$/i), "Co");
-    await user.type(screen.getByLabelText(/adresse complète/i), "Addr");
+    await user.type(screen.getByLabelText(/^adresse$/i), "Addr");
+    await user.type(screen.getByLabelText(/^code postal$/i), "75001");
+    await user.type(screen.getByLabelText(/^ville$/i), "Paris");
 
     await user.click(screen.getByRole("button", { name: /créer le client/i }));
 
