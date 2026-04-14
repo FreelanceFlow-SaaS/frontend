@@ -9,7 +9,7 @@ import { MoneyDisplay } from "@/components/shared/money-display";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
 import { DeleteServiceDialog } from "@/modules/services/components/delete-service-dialog";
 import { fetchServices, type ServiceDto } from "@/lib/api/services-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 function TableSkeleton() {
   return (
@@ -48,9 +48,7 @@ export function ServicesList() {
   const load = useCallback(async (): Promise<void> => {
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
-      setLoading(false);
-      setServices(null);
+      redirectToLogin();
       return;
     }
     setLoading(true);

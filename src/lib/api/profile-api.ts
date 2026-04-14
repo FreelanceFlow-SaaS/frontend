@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from "@/lib/api/base-url";
 import { mapApiErrorToMessage } from "@/lib/auth/map-api-error";
+import { redirectToLogin } from "@/lib/auth/session";
 
 export type FreelancerProfileDto = {
   id?: string;
@@ -38,6 +39,10 @@ export async function fetchSellerProfile(accessToken: string): Promise<UserWithP
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de charger le profil."));
   }
@@ -58,6 +63,10 @@ export async function patchSellerProfile(
     body: JSON.stringify(payload),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible d'enregistrer le profil."));
   }

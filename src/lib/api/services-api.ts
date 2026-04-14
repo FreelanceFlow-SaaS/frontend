@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from "@/lib/api/base-url";
 import { mapApiErrorToMessage } from "@/lib/auth/map-api-error";
+import { redirectToLogin } from "@/lib/auth/session";
 
 export type ServiceDto = {
   id: string;
@@ -36,6 +37,10 @@ export async function fetchServices(accessToken: string): Promise<ServiceDto[]> 
     headers: { ...authHeaders(accessToken) },
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de charger les prestations."));
   }
@@ -52,6 +57,10 @@ export async function fetchService(accessToken: string, id: string): Promise<Ser
     headers: { ...authHeaders(accessToken) },
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Prestation introuvable."));
   }
@@ -69,6 +78,10 @@ export async function createService(
     body: JSON.stringify(payload),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de créer la prestation."));
   }
@@ -87,6 +100,10 @@ export async function updateService(
     body: JSON.stringify(payload),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de mettre à jour la prestation."));
   }
@@ -99,6 +116,10 @@ export async function deleteService(accessToken: string, id: string): Promise<vo
     credentials: "include",
     headers: { ...authHeaders(accessToken) },
   });
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (res.status === 204) return;
   const body = await parseJson(res);
   throw new Error(mapApiErrorToMessage(body, "Impossible de supprimer la prestation."));

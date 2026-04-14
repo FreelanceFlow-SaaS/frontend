@@ -14,7 +14,7 @@ import { InvoiceStatusActions } from "@/modules/invoices/components/invoice-stat
 import { InvoicePdfActions } from "@/modules/invoices/components/invoice-pdf-actions";
 import { InvoiceTotalsPanel } from "@/modules/invoices/components/invoice-totals-panel";
 import { fetchInvoice, updateInvoice, type InvoiceDto } from "@/lib/api/invoices-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 import { invoiceStatusLabel } from "@/modules/invoices/utils/invoice-i18n";
 
 type InvoiceDetailViewProps = {
@@ -46,8 +46,7 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
   const load = useCallback(async () => {
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée.");
-      setLoading(false);
+      redirectToLogin();
       return;
     }
     setLoading(true);

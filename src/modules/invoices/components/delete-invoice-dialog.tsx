@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { deleteInvoice } from "@/lib/api/invoices-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 type DeleteInvoiceDialogProps = {
   invoiceId: string;
@@ -33,7 +33,7 @@ export function DeleteInvoiceDialog({
     setError(null);
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée.");
+      redirectToLogin();
       return;
     }
     setDeleting(true);

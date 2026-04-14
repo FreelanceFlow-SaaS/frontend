@@ -1,12 +1,17 @@
 import { getApiBaseUrl } from "@/lib/api/base-url";
 import { mapApiErrorToMessage } from "@/lib/auth/map-api-error";
+import { redirectToLogin } from "@/lib/auth/session";
 
 export type ClientDto = {
   id: string;
   name: string;
   email: string;
   company: string;
-  address: string;
+  address?: string;
+  addressLine1?: string;
+  zipCode?: string;
+  city?: string;
+  country?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -15,7 +20,10 @@ export type ClientPayload = {
   name: string;
   email: string;
   company: string;
-  address: string;
+  addressLine1: string;
+  zipCode: string;
+  city: string;
+  country: string;
 };
 
 async function parseJson(res: Response): Promise<unknown> {
@@ -39,6 +47,10 @@ export async function fetchClients(accessToken: string): Promise<ClientDto[]> {
     headers: { ...authHeaders(accessToken) },
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de charger les clients."));
   }
@@ -55,6 +67,10 @@ export async function fetchClient(accessToken: string, id: string): Promise<Clie
     headers: { ...authHeaders(accessToken) },
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Client introuvable."));
   }
@@ -72,6 +88,10 @@ export async function createClient(
     body: JSON.stringify(payload),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de créer le client."));
   }
@@ -90,6 +110,10 @@ export async function updateClient(
     body: JSON.stringify(payload),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de mettre à jour le client."));
   }
@@ -102,6 +126,10 @@ export async function deleteClient(accessToken: string, id: string): Promise<voi
     credentials: "include",
     headers: { ...authHeaders(accessToken) },
   });
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (res.status === 204) return;
   const body = await parseJson(res);
   throw new Error(mapApiErrorToMessage(body, "Impossible de supprimer le client."));

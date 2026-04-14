@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { deleteClient } from "@/lib/api/clients-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 type DeleteClientDialogProps = {
   clientId: string;
@@ -29,7 +29,7 @@ export function DeleteClientDialog({ clientId, clientName, onDeleted }: DeleteCl
     setError(null);
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée.");
+      redirectToLogin();
       return;
     }
     setDeleting(true);

@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from "@/lib/api/base-url";
 import { mapApiErrorToMessage } from "@/lib/auth/map-api-error";
+import { redirectToLogin } from "@/lib/auth/session";
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "cancelled";
 
@@ -85,6 +86,10 @@ export async function fetchInvoices(accessToken: string): Promise<InvoiceDto[]> 
     headers: { ...authHeaders(accessToken) },
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de charger les factures."));
   }
@@ -101,6 +106,10 @@ export async function fetchInvoice(accessToken: string, id: string): Promise<Inv
     headers: { ...authHeaders(accessToken) },
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Facture introuvable."));
   }
@@ -118,6 +127,10 @@ export async function createInvoice(
     body: JSON.stringify(payload),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de créer la facture."));
   }
@@ -136,6 +149,10 @@ export async function updateInvoice(
     body: JSON.stringify(payload),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible de mettre à jour la facture."));
   }
@@ -154,6 +171,10 @@ export async function updateInvoiceLines(
     body: JSON.stringify({ lines }),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Impossible d'enregistrer les lignes."));
   }
@@ -172,6 +193,10 @@ export async function updateInvoiceStatus(
     body: JSON.stringify({ status }),
   });
   const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (!res.ok) {
     throw new Error(mapApiErrorToMessage(body, "Changement de statut impossible."));
   }
@@ -184,6 +209,10 @@ export async function deleteInvoice(accessToken: string, id: string): Promise<vo
     credentials: "include",
     headers: { ...authHeaders(accessToken) },
   });
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
   if (res.status === 204) return;
   const body = await parseJson(res);
   throw new Error(mapApiErrorToMessage(body, "Impossible de supprimer la facture."));
