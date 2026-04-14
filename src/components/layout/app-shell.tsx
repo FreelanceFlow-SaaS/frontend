@@ -10,6 +10,7 @@ import { clearAccessToken, getAccessTokenFromStorage } from "@/lib/auth/session"
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
+  { href: "/dashboard", label: "Tableau de bord" },
   { href: "/factures", label: "Factures" },
   { href: "/clients", label: "Clients" },
   { href: "/prestations", label: "Prestations" },
