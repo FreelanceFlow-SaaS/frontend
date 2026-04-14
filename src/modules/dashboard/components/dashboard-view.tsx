@@ -1,14 +1,79 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/shared/money-display";
 import { fetchDashboardSummary, type DashboardSummaryDto } from "@/lib/api/dashboard-api";
+import { fetchInvoices, type InvoiceDto } from "@/lib/api/invoices-api";
 import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
+
+type RevenueByClient = {
+  clientId: string;
+  label: string;
+  totalTtc: string;
+};
+
+type RevenueByMonth = {
+  yearMonth: string;
+  totalTtc: string;
+};
+
+function monthLabel(yearMonth: string): string {
+  const [year, month] = yearMonth.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date);
+}
+
+function resolveAttributionDate(invoice: InvoiceDto): string {
+  return invoice.paidAt ?? invoice.updatedAt;
+}
+
+function computeBreakdowns(invoices: InvoiceDto[]): {
+  revenueByClient: RevenueByClient[];
+  revenueByMonth: RevenueByMonth[];
+} {
+  const paid = invoices.filter((invoice) => invoice.status === "paid");
+  const byClient = new Map<string, { label: string; total: number }>();
+  const byMonth = new Map<string, number>();
+
+  for (const invoice of paid) {
+    const amount = Number.parseFloat(String(invoice.totalTtc).replace(",", "."));
+    if (!Number.isFinite(amount)) continue;
+
+    const clientEntry = byClient.get(invoice.clientId) ?? { label: invoice.client.name, total: 0 };
+    clientEntry.total += amount;
+    byClient.set(invoice.clientId, clientEntry);
+
+    const d = new Date(resolveAttributionDate(invoice));
+    const parisParts = new Intl.DateTimeFormat("fr-CA", {
+      timeZone: "Europe/Paris",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(d);
+    const year = parisParts.find((p) => p.type === "year")?.value ?? "1970";
+    const month = parisParts.find((p) => p.type === "month")?.value ?? "01";
+    const key = `${year}-${month}`;
+    byMonth.set(key, (byMonth.get(key) ?? 0) + amount);
+  }
+
+  return {
+    revenueByClient: Array.from(byClient.entries())
+      .map(([clientId, value]) => ({
+        clientId,
+        label: value.label,
+        totalTtc: value.total.toFixed(2),
+      }))
+      .sort((a, b) => Number.parseFloat(b.totalTtc) - Number.parseFloat(a.totalTtc)),
+    revenueByMonth: Array.from(byMonth.entries())
+      .map(([yearMonth, total]) => ({ yearMonth, totalTtc: total.toFixed(2) }))
+      .sort((a, b) => a.yearMonth.localeCompare(b.yearMonth)),
+  };
+}
 
 export function DashboardView() {
   const [summary, setSummary] = useState<DashboardSummaryDto | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,11 +86,16 @@ export function DashboardView() {
     setLoading(true);
     setError(null);
     try {
-      const summaryData = await fetchDashboardSummary(token);
+      const [summaryData, invoicesData] = await Promise.all([
+        fetchDashboardSummary(token),
+        fetchInvoices(token),
+      ]);
       setSummary(summaryData);
+      setInvoices(invoicesData);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chargement impossible.");
       setSummary(null);
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
@@ -34,6 +104,10 @@ export function DashboardView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const fallbackBreakdowns = useMemo(() => computeBreakdowns(invoices), [invoices]);
+  const revenueByClient = summary?.revenueByClient ?? fallbackBreakdowns.revenueByClient;
+  const revenueByMonth = summary?.revenueByMonth ?? fallbackBreakdowns.revenueByMonth;
 
   return (
     <div className="p-8">
@@ -74,11 +148,52 @@ export function DashboardView() {
             </article>
           </section>
 
-          <section className="mt-8 rounded-lg border border-border bg-card p-5">
-            <h2 className="text-base font-semibold text-foreground">Répartition</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Les détails par client et par mois arrivent dans l&apos;itération suivante.
-            </p>
+          <section className="mt-8 grid gap-6 lg:grid-cols-2">
+            <article className="rounded-lg border border-border bg-card p-5">
+              <h2 className="text-base font-semibold text-foreground">Revenus par client</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Basé sur les factures au statut payé.
+              </p>
+              {revenueByClient.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">Aucun revenu client encaissé.</p>
+              ) : (
+                <ul className="mt-4 space-y-2">
+                  {revenueByClient.map((row) => (
+                    <li
+                      key={row.clientId}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                    >
+                      <span className="truncate text-sm text-foreground">{row.label}</span>
+                      <MoneyDisplay amount={row.totalTtc} className="text-sm font-medium" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+
+            <article className="rounded-lg border border-border bg-card p-5">
+              <h2 className="text-base font-semibold text-foreground">Revenus par mois</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Agrégation mensuelle calendrier (Europe/Paris).
+              </p>
+              {revenueByMonth.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Aucun mois avec revenu encaissé.
+                </p>
+              ) : (
+                <ul className="mt-4 space-y-2">
+                  {revenueByMonth.map((row) => (
+                    <li
+                      key={row.yearMonth}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                    >
+                      <span className="text-sm text-foreground">{monthLabel(row.yearMonth)}</span>
+                      <MoneyDisplay amount={row.totalTtc} className="text-sm font-medium" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
           </section>
         </>
       ) : null}

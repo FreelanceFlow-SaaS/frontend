@@ -19,8 +19,29 @@ vi.mock("@/lib/api/dashboard-api", () => ({
   })),
 }));
 
+vi.mock("@/lib/api/invoices-api", () => ({
+  fetchInvoices: vi.fn(async () => [
+    {
+      id: "inv-1",
+      clientId: "cli-1",
+      client: { name: "Acme" },
+      totalTtc: "1000.00",
+      status: "paid",
+      updatedAt: "2026-01-15T10:00:00.000Z",
+    },
+    {
+      id: "inv-2",
+      clientId: "cli-2",
+      client: { name: "Globex" },
+      totalTtc: "250.50",
+      status: "paid",
+      updatedAt: "2026-02-15T10:00:00.000Z",
+    },
+  ]),
+}));
+
 describe("DashboardView", () => {
-  it("affiche les KPI du dashboard", async () => {
+  it("affiche les KPI et les répartitions", async () => {
     render(
       <ThemeProvider>
         <DashboardView />
@@ -31,6 +52,8 @@ describe("DashboardView", () => {
       expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
       expect(screen.getByText(/nombre total de factures/i)).toBeInTheDocument();
       expect(screen.getByText("4")).toBeInTheDocument();
+      expect(screen.getByText(/acme/i)).toBeInTheDocument();
+      expect(screen.getByText(/globex/i)).toBeInTheDocument();
     });
   });
 });
