@@ -13,4 +13,3 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   }
   return res;
 }
-
