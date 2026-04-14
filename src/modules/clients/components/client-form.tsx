@@ -15,6 +15,9 @@ type ClientFormProps = {
   clientId?: string;
 };
 
+type ClientField = keyof ClientPayload;
+type ClientFieldErrors = Partial<Record<ClientField, string>>;
+
 const emptyPayload: ClientPayload = {
   name: "",
   email: "",
@@ -31,6 +34,7 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
   const [loading, setLoading] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<ClientFieldErrors>({});
 
   useEffect(() => {
     if (mode !== "edit" || !clientId) return;
@@ -65,8 +69,10 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
     };
   }, [mode, clientId]);
 
-  function field(name: keyof ClientPayload, label: string, inputType = "text") {
+  function field(name: ClientField, label: string, inputType = "text") {
     const id = `${formPrefix}-${name}`;
+    const fieldError = fieldErrors[name];
+    const fieldErrorId = `${id}-error`;
     return (
       <div className="grid gap-2" key={name}>
         <Label htmlFor={id}>{label}</Label>
@@ -75,11 +81,25 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
           name={name}
           type={inputType}
           value={values[name]}
-          onChange={(e) => setValues((v) => ({ ...v, [name]: e.target.value }))}
+          onChange={(e) => {
+            setValues((v) => ({ ...v, [name]: e.target.value }));
+            if (fieldErrors[name]) {
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next[name];
+                return next;
+              });
+            }
+          }}
           disabled={saving || loading}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : undefined}
+          aria-invalid={Boolean(fieldError)}
+          aria-describedby={fieldError ? fieldErrorId : undefined}
         />
+        {fieldError ? (
+          <p id={fieldErrorId} className="text-sm text-destructive" role="alert">
+            {fieldError}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -87,6 +107,7 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     const token = getAccessTokenFromStorage();
     if (!token) {
       setError("Session expirée. Reconnectez-vous.");
@@ -98,8 +119,17 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
       company: values.company.trim(),
       address: values.address.trim(),
     };
-    if (!trimmed.name || !trimmed.email || !trimmed.company || !trimmed.address) {
-      setError("Remplissez tous les champs obligatoires.");
+    const nextFieldErrors: ClientFieldErrors = {};
+    if (!trimmed.name) nextFieldErrors.name = "Le nom est obligatoire.";
+    if (!trimmed.email) {
+      nextFieldErrors.email = "L'e-mail est obligatoire.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed.email)) {
+      nextFieldErrors.email = "L'e-mail doit être une adresse valide.";
+    }
+    if (!trimmed.company) nextFieldErrors.company = "L'entreprise est obligatoire.";
+    if (!trimmed.address) nextFieldErrors.address = "L'adresse est obligatoire.";
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
       return;
     }
     setSaving(true);
@@ -114,7 +144,19 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
         router.push("/clients?updated=1");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+      const message = err instanceof Error ? err.message : "Enregistrement impossible.";
+      const lowered = message.toLowerCase();
+
+      if (lowered.includes("email")) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          email: "L'e-mail doit être une adresse valide.",
+        }));
+        return;
+      }
+
+      // Keep global alert only for non-field/internal failures.
+      setError(message);
     } finally {
       setSaving(false);
     }
