@@ -42,6 +42,7 @@ describe("CreateInvoiceForm", () => {
       },
     };
     const clientsRes = [{ id: "c1", name: "Acme", email: "a@a.fr", company: "A", address: "x" }];
+    const servicesRes = [{ id: "s1", title: "Dev", hourlyRateHt: "100" }];
     const createdInv = {
       id: "inv1",
       clientId: "c1",
@@ -73,6 +74,12 @@ describe("CreateInvoiceForm", () => {
           text: async () => JSON.stringify(clientsRes),
         } as Response);
       }
+      if (url.includes("/services") && init?.method !== "POST" && !/\/services\/[^/]+$/.test(url)) {
+        return Promise.resolve({
+          ok: true,
+          text: async () => JSON.stringify(servicesRes),
+        } as Response);
+      }
       if (url.includes("/invoices") && init?.method === "POST") {
         return Promise.resolve({
           ok: true,
@@ -93,9 +100,7 @@ describe("CreateInvoiceForm", () => {
     });
 
     await user.selectOptions(screen.getByLabelText(/^client$/i), "c1");
-    await user.type(screen.getByLabelText(/^description$/i), "Mission");
-    await user.clear(screen.getByLabelText(/^prix unitaire ht/i));
-    await user.type(screen.getByLabelText(/^prix unitaire ht/i), "100");
+    await user.selectOptions(screen.getByLabelText(/^prestation$/i), "s1");
 
     await user.click(screen.getByRole("button", { name: /créer le brouillon/i }));
 
