@@ -31,7 +31,10 @@ const emptyPayload: ClientPayload = {
   name: "",
   email: "",
   company: "",
-  address: "",
+  addressLine1: "",
+  zipCode: "",
+  city: "",
+  country: "FR",
 };
 
 function parseAddress(address: string): AddressFields {
@@ -80,12 +83,22 @@ function parseAddress(address: string): AddressFields {
   return { addressLine: raw, zipCode: "", city: "", country: "" };
 }
 
-function formatAddress(fields: AddressFields): string {
-  const line1 = fields.addressLine.trim();
-  const zip = fields.zipCode.trim();
-  const city = fields.city.trim();
-  const country = fields.country.trim().toUpperCase();
-  return [line1, `${zip} ${city}`.trim(), country].filter(Boolean).join("\n");
+function parseAddressFromClient(client: {
+  address?: string;
+  addressLine1?: string;
+  zipCode?: string;
+  city?: string;
+  country?: string;
+}): AddressFields {
+  if (client.addressLine1 || client.zipCode || client.city || client.country) {
+    return {
+      addressLine: client.addressLine1 ?? "",
+      zipCode: client.zipCode ?? "",
+      city: client.city ?? "",
+      country: client.country ?? "FR",
+    };
+  }
+  return parseAddress(client.address ?? "");
 }
 
 export function ClientForm({ mode, clientId }: ClientFormProps) {
@@ -117,12 +130,15 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
       try {
         const c = await fetchClient(token, clientId);
         if (!cancelled) {
-          const parsed = parseAddress(c.address);
+          const parsed = parseAddressFromClient(c);
           setValues({
             name: c.name,
             email: c.email,
             company: c.company,
-            address: c.address,
+            addressLine1: parsed.addressLine,
+            zipCode: parsed.zipCode,
+            city: parsed.city,
+            country: parsed.country || "FR",
           });
           setAddress({
             addressLine: parsed.addressLine,
@@ -192,7 +208,10 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
       name: values.name.trim(),
       email: values.email.trim(),
       company: values.company.trim(),
-      address: formatAddress(address),
+      addressLine1: address.addressLine.trim(),
+      zipCode: address.zipCode.trim(),
+      city: address.city.trim(),
+      country: address.country.trim().toUpperCase(),
     };
     const nextFieldErrors: FormFieldErrors = {};
     if (!trimmed.name) nextFieldErrors.name = "Le nom est obligatoire.";
@@ -202,12 +221,12 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
       nextFieldErrors.email = "L'e-mail doit être une adresse valide.";
     }
     if (!trimmed.company) nextFieldErrors.company = "L'entreprise est obligatoire.";
-    if (!address.addressLine.trim()) nextFieldErrors.addressLine = "L'adresse est obligatoire.";
-    if (!address.zipCode.trim()) nextFieldErrors.zipCode = "Le code postal est obligatoire.";
-    if (!address.city.trim()) nextFieldErrors.city = "La ville est obligatoire.";
-    if (!address.country.trim()) {
+    if (!trimmed.addressLine1) nextFieldErrors.addressLine = "L'adresse est obligatoire.";
+    if (!trimmed.zipCode) nextFieldErrors.zipCode = "Le code postal est obligatoire.";
+    if (!trimmed.city) nextFieldErrors.city = "La ville est obligatoire.";
+    if (!trimmed.country) {
       nextFieldErrors.country = "Le pays est obligatoire.";
-    } else if (!/^[A-Z]{2}$/.test(address.country.trim().toUpperCase())) {
+    } else if (!/^[A-Z]{2}$/.test(trimmed.country)) {
       nextFieldErrors.country = "Pays : indiquez un code ISO à 2 lettres (ex. FR).";
     }
     if (Object.keys(nextFieldErrors).length > 0) {

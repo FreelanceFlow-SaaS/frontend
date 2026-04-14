@@ -7,7 +7,11 @@ export type ClientDto = {
   name: string;
   email: string;
   company: string;
-  address: string;
+  address?: string;
+  addressLine1?: string;
+  zipCode?: string;
+  city?: string;
+  country?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -16,7 +20,10 @@ export type ClientPayload = {
   name: string;
   email: string;
   company: string;
-  address: string;
+  addressLine1: string;
+  zipCode: string;
+  city: string;
+  country: string;
 };
 
 async function parseJson(res: Response): Promise<unknown> {
