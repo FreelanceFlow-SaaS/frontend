@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { logoutRequest } from "@/lib/auth/auth-api";
 import { clearAccessToken, getAccessTokenFromStorage } from "@/lib/auth/session";
@@ -76,7 +76,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b border-border bg-background px-6 py-4">
-          <ThemeSwitcher />
+          <div className="flex justify-end">
+            <ThemeToggle />
+          </div>
         </header>
         <main id="main" className="flex-1">
           {children}
