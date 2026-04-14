@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
 import { DeleteClientDialog } from "@/modules/clients/components/delete-client-dialog";
 import { fetchClients, type ClientDto } from "@/lib/api/clients-api";
+import { fetchInvoices } from "@/lib/api/invoices-api";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
 function TableSkeleton() {
@@ -21,9 +22,12 @@ function TableSkeleton() {
 }
 
 export function ClientsList() {
+  const cannotDeleteTooltip =
+    "Impossible de supprimer ce client: il est utilisé dans une ou plusieurs factures.";
   const router = useRouter();
   const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientDto[] | null>(null);
+  const [usedClientIds, setUsedClientIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
@@ -51,8 +55,25 @@ export function ClientsList() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchClients(token);
+      const [clientsResult, invoicesResult] = await Promise.allSettled([
+        fetchClients(token),
+        fetchInvoices(token),
+      ]);
+
+      if (clientsResult.status === "rejected") {
+        throw clientsResult.reason;
+      }
+
+      const data = clientsResult.value;
       setClients(data);
+
+      if (invoicesResult.status === "fulfilled") {
+        const ids = new Set(invoicesResult.value.map((invoice) => invoice.clientId));
+        setUsedClientIds(ids);
+      } else {
+        // Keep list usable even if invoice list loading fails.
+        setUsedClientIds(new Set());
+      }
     } catch (e) {
       setClients(null);
       setError(e instanceof Error ? e.message : "Chargement impossible.");
@@ -143,16 +164,36 @@ export function ClientsList() {
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/clients/${c.id}/edit`}>Modifier</Link>
                       </Button>
-                      <DeleteClientDialog
-                        clientId={c.id}
-                        clientName={c.name}
-                        onDeleted={() => {
-                          void (async () => {
-                            await load();
-                            router.push("/clients?deleted=1");
-                          })();
-                        }}
-                      />
+                      {usedClientIds.has(c.id) ? (
+                        <div className="group relative inline-flex items-center" tabIndex={0}>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            disabled
+                            aria-disabled
+                          >
+                            Supprimer
+                          </Button>
+                          <span
+                            role="tooltip"
+                            className="pointer-events-none absolute bottom-full right-0 z-[60] mb-2 w-64 rounded-md border border-primary/30 bg-primary px-3 py-2 text-left text-xs leading-relaxed text-primary-foreground opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                          >
+                            {cannotDeleteTooltip}
+                          </span>
+                        </div>
+                      ) : (
+                        <DeleteClientDialog
+                          clientId={c.id}
+                          clientName={c.name}
+                          onDeleted={() => {
+                            void (async () => {
+                              await load();
+                              router.push("/clients?deleted=1");
+                            })();
+                          }}
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>
