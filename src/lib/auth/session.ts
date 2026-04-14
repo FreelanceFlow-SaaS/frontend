@@ -21,3 +21,12 @@ export function getAccessTokenFromStorage(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
 }
+
+export function redirectToLogin(from?: string) {
+  if (typeof window === "undefined") return;
+  clearAccessToken();
+  const nextFrom = from ?? window.location.pathname ?? "/";
+  const url = new URL("/login", window.location.origin);
+  url.searchParams.set("from", nextFrom);
+  window.location.href = url.toString();
+}

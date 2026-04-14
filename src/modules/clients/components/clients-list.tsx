@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
 import { DeleteClientDialog } from "@/modules/clients/components/delete-client-dialog";
 import { fetchClients, type ClientDto } from "@/lib/api/clients-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 function TableSkeleton() {
   return (
@@ -43,9 +43,7 @@ export function ClientsList() {
   const load = useCallback(async (): Promise<void> => {
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
-      setLoading(false);
-      setClients(null);
+      redirectToLogin();
       return;
     }
     setLoading(true);

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/shared/money-display";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
 import { fetchInvoices, type InvoiceDto } from "@/lib/api/invoices-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 import { invoiceStatusLabel } from "@/modules/invoices/utils/invoice-i18n";
 
 type SortMode = "date" | "status";
@@ -69,9 +69,7 @@ export function InvoicesList() {
   const load = useCallback(async (): Promise<void> => {
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
-      setLoading(false);
-      setInvoices(null);
+      redirectToLogin();
       return;
     }
     setLoading(true);

@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from "@/lib/api/base-url";
 import { mapApiErrorToMessage } from "@/lib/auth/map-api-error";
+import { redirectToLogin } from "@/lib/auth/session";
 
 async function parseJson(res: Response): Promise<unknown> {
   const text = await res.text();
@@ -20,6 +21,11 @@ export async function fetchInvoicePdfBlob(accessToken: string, invoiceId: string
     credentials: "include",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
 
   if (!res.ok) {
     const ct = res.headers.get("content-type") ?? "";

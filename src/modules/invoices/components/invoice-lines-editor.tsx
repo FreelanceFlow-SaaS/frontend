@@ -12,7 +12,7 @@ import {
   type InvoiceLineDto,
 } from "@/lib/api/invoices-api";
 import { fetchServices, type ServiceDto } from "@/lib/api/services-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 type Row = {
   key: string;
@@ -128,7 +128,7 @@ export function InvoiceLinesEditor({ invoiceId, lines, onSaved }: InvoiceLinesEd
   useEffect(() => {
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setLoadingServices(false);
+      redirectToLogin();
       return;
     }
     let cancelled = false;
@@ -204,7 +204,7 @@ export function InvoiceLinesEditor({ invoiceId, lines, onSaved }: InvoiceLinesEd
     setError(null);
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée.");
+      redirectToLogin();
       return;
     }
     const built = buildPayload(rows);

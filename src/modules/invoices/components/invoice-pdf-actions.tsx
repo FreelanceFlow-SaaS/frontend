@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { fetchInvoicePdfBlob } from "@/lib/api/pdf-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 type InvoicePdfActionsProps = {
   invoiceId: string;
@@ -33,8 +33,7 @@ export function InvoicePdfActions({ invoiceId, invoiceNumber }: InvoicePdfAction
     setAnnounce("");
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
-      setAnnounce("Échec : session expirée.");
+      redirectToLogin();
       return;
     }
     setGenerating(true);

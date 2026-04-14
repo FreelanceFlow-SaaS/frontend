@@ -11,7 +11,7 @@ import { fetchClients } from "@/lib/api/clients-api";
 import { createInvoice, type CreateInvoiceLinePayload } from "@/lib/api/invoices-api";
 import { fetchSellerProfile } from "@/lib/api/profile-api";
 import { fetchServices, type ServiceDto } from "@/lib/api/services-api";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -90,8 +90,7 @@ export function CreateInvoiceForm() {
   useEffect(() => {
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée. Reconnectez-vous.");
-      setLoading(false);
+      redirectToLogin();
       return;
     }
     let cancelled = false;
@@ -147,7 +146,7 @@ export function CreateInvoiceForm() {
     setError(null);
     const token = getAccessTokenFromStorage();
     if (!token) {
-      setError("Session expirée.");
+      redirectToLogin();
       return;
     }
     if (!profileOk) {
