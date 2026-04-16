@@ -9,6 +9,10 @@ import { MoneyDisplay } from "@/components/shared/money-display";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
 import { fetchInvoices, type InvoiceDto } from "@/lib/api/invoices-api";
 import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
+import {
+  buildInvoiceExportFilenameV1,
+  invoicesToCsvV1,
+} from "@/modules/invoices/utils/invoices-export-csv";
 import { invoiceStatusLabel } from "@/modules/invoices/utils/invoice-i18n";
 
 type SortMode = "date" | "status";
@@ -55,6 +59,8 @@ export function InvoicesList() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("date");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     const created = searchParams.get("created");
@@ -94,6 +100,29 @@ export function InvoicesList() {
     return sortInvoices(invoices, sortMode);
   }, [invoices, sortMode]);
 
+  const onExportCsv = useCallback(() => {
+    if (!invoices || invoices.length === 0) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const csv = invoicesToCsvV1(invoices, { delimiter: ";", includeBom: true, newline: "\r\n" });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = buildInvoiceExportFilenameV1();
+      a.rel = "noopener";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Export impossible.");
+    } finally {
+      setExporting(false);
+    }
+  }, [invoices]);
+
   return (
     <div className="p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -121,6 +150,14 @@ export function InvoicesList() {
               <option value="status">Statut</option>
             </select>
           </div>
+          <Button
+            variant="secondary"
+            onClick={onExportCsv}
+            disabled={loading || exporting || !invoices || invoices.length === 0}
+            aria-busy={exporting ? "true" : "false"}
+          >
+            {exporting ? "Export en cours…" : "Exporter CSV"}
+          </Button>
           <Button asChild>
             <Link href="/factures/new">Nouvelle facture</Link>
           </Button>
@@ -136,6 +173,12 @@ export function InvoicesList() {
       {error ? (
         <Alert variant="destructive" className="mb-6" role="alert">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {exportError ? (
+        <Alert variant="destructive" className="mb-6" role="alert">
+          <AlertDescription>{exportError}</AlertDescription>
         </Alert>
       ) : null}
 
