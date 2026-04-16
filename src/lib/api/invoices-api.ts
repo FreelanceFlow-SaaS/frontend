@@ -38,6 +38,7 @@ export type InvoiceDto = {
   totalTtc: string | number;
   createdAt: string;
   updatedAt: string;
+  paidAt?: string | null;
   client: InvoiceClientDto;
   lines: InvoiceLineDto[];
 };
