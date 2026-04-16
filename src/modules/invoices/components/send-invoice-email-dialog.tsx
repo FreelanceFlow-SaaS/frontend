@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -44,12 +44,18 @@ export function SendInvoiceEmailDialog({
   );
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
   const recipients = useMemo(() => parseRecipients(toRaw), [toRaw]);
 
   useEffect(() => {
     if (!defaultRecipient) return;
     setToRaw((current) => (current.trim().length === 0 ? defaultRecipient : current));
   }, [defaultRecipient]);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   async function handleSend() {
     setError(null);
@@ -146,7 +152,7 @@ export function SendInvoiceEmailDialog({
         </div>
 
         {error ? (
-          <p className="text-sm text-destructive" role="alert">
+          <p ref={errorRef} className="text-sm text-destructive" role="alert">
             {error}
           </p>
         ) : null}

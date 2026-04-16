@@ -120,7 +120,7 @@ export function DashboardView() {
     summaryRevenueByMonth.length > 0 ? summaryRevenueByMonth : fallbackBreakdowns.revenueByMonth;
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-foreground">Tableau de bord</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -143,7 +143,10 @@ export function DashboardView() {
 
       {!loading && summary ? (
         <>
-          <section className="grid gap-4 sm:grid-cols-2" aria-label="Indicateurs principaux">
+          <section
+            className="grid gap-3 sm:grid-cols-2 sm:gap-4"
+            aria-label="Indicateurs principaux"
+          >
             <article className="rounded-lg border border-border bg-card p-5">
               <p className="text-sm text-muted-foreground">Revenu encaissé (TTC)</p>
               <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -158,7 +161,7 @@ export function DashboardView() {
             </article>
           </section>
 
-          <section className="mt-8 grid gap-6 lg:grid-cols-2">
+          <section className="mt-6 grid gap-4 lg:mt-8 lg:grid-cols-2 lg:gap-6">
             <article className="rounded-lg border border-border bg-card p-5">
               <h2 className="text-base font-semibold text-foreground">Revenus par client</h2>
               <p className="mt-1 text-sm text-muted-foreground">

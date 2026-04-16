@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,6 +20,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   const from = searchParams.get("from");
   const loggedOut = searchParams.get("loggedOut") === "1";
@@ -44,6 +45,11 @@ export function LoginForm() {
     }
   }
 
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
+
   return (
     <form className="space-y-6" onSubmit={onSubmit} noValidate>
       <div className="space-y-2 text-center">
@@ -60,7 +66,7 @@ export function LoginForm() {
       ) : null}
 
       {error ? (
-        <Alert variant="destructive" id={errorId} role="alert">
+        <Alert ref={errorRef} variant="destructive" id={errorId} role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

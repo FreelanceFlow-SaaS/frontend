@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -117,6 +117,7 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (mode !== "edit" || !clientId) return;
@@ -159,6 +160,11 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
       cancelled = true;
     };
   }, [mode, clientId]);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   function field(name: ClientField, label: string, inputType = "text") {
     const id = `${formPrefix}-${name}`;
@@ -287,7 +293,7 @@ export function ClientForm({ mode, clientId }: ClientFormProps) {
       </div>
 
       {error ? (
-        <Alert variant="destructive" id={errorId} className="mb-4" role="alert">
+        <Alert ref={errorRef} variant="destructive" id={errorId} className="mb-4" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
