@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LogoUpload } from "@/components/profile/logo-upload";
 import {
   fetchSellerProfile,
   patchSellerProfile,
@@ -49,10 +50,12 @@ export function ProfileForm() {
   const successId = `${formId}-success`;
 
   const [values, setValues] = useState<FreelancerProfileDto>(emptyForm());
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const token = getAccessTokenFromStorage();
@@ -66,6 +69,7 @@ export function ProfileForm() {
         const user = await fetchSellerProfile(token);
         if (!cancelled) {
           setValues(fromProfile(user.profile));
+          setLogoUrl(user.profile?.logoUrl ?? null);
         }
       } catch (e) {
         if (!cancelled) {
@@ -79,6 +83,11 @@ export function ProfileForm() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   function field<K extends keyof FreelancerProfileDto>(
     key: K,
@@ -165,8 +174,15 @@ export function ProfileForm() {
         </p>
       </div>
 
+      <LogoUpload
+        currentLogoUrl={logoUrl}
+        onUploaded={(next) => {
+          if (typeof next.logoUrl === "string") setLogoUrl(next.logoUrl);
+        }}
+      />
+
       {error ? (
-        <Alert variant="destructive" id={errorId} role="alert">
+        <Alert ref={errorRef} variant="destructive" id={errorId} role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

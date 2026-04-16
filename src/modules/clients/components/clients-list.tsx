@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ResourceEmptyState } from "@/components/shared/resource-empty-state";
@@ -31,6 +31,7 @@ export function ClientsList() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const created = searchParams.get("created");
@@ -84,8 +85,13 @@ export function ClientsList() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
+
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Clients</h1>
@@ -105,7 +111,7 @@ export function ClientsList() {
       ) : null}
 
       {error ? (
-        <Alert variant="destructive" className="mb-6" role="alert">
+        <Alert ref={errorRef} variant="destructive" className="mb-6" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -125,80 +131,113 @@ export function ClientsList() {
       ) : null}
 
       {!loading && !error && clients && clients.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[32rem] text-left text-sm">
-            <caption className="sr-only">Liste de vos clients</caption>
-            <thead className="border-b border-border bg-muted/50">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  Nom
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  E-mail
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  Entreprise
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/clients/${c.id}/edit`}
-                      className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.company}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/clients/${c.id}/edit`}>Modifier</Link>
-                      </Button>
-                      {usedClientIds.has(c.id) ? (
-                        <div className="group relative inline-flex items-center" tabIndex={0}>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            disabled
-                            aria-disabled
-                          >
-                            Supprimer
-                          </Button>
-                          <span
-                            role="tooltip"
-                            className="pointer-events-none absolute bottom-full right-0 z-[60] mb-2 w-64 rounded-md border border-primary/30 bg-primary px-3 py-2 text-left text-xs leading-relaxed text-primary-foreground opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                          >
-                            {cannotDeleteTooltip}
-                          </span>
-                        </div>
-                      ) : (
-                        <DeleteClientDialog
-                          clientId={c.id}
-                          clientName={c.name}
-                          onDeleted={() => {
-                            void (async () => {
-                              await load();
-                              router.push("/clients?deleted=1");
-                            })();
-                          }}
-                        />
-                      )}
-                    </div>
-                  </td>
+        <>
+          <div className="space-y-3 md:hidden">
+            {clients.map((c) => (
+              <article key={c.id} className="rounded-lg border border-border bg-card p-4">
+                <p className="font-medium text-foreground">{c.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{c.email}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{c.company}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href={`/clients/${c.id}/edit`}>Modifier ce client</Link>
+                  </Button>
+                  {usedClientIds.has(c.id) ? (
+                    <Button type="button" variant="destructive" size="sm" disabled aria-disabled>
+                      Supprimer
+                    </Button>
+                  ) : (
+                    <DeleteClientDialog
+                      clientId={c.id}
+                      clientName={c.name}
+                      onDeleted={() => {
+                        void (async () => {
+                          await load();
+                          router.push("/clients?deleted=1");
+                        })();
+                      }}
+                    />
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
+            <table className="w-full min-w-[32rem] text-left text-sm">
+              <caption className="sr-only">Liste de vos clients</caption>
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    Nom
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    E-mail
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    Entreprise
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {clients.map((c) => (
+                  <tr key={c.id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/clients/${c.id}/edit`}
+                        className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        {c.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.company}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/clients/${c.id}/edit`}>Modifier</Link>
+                        </Button>
+                        {usedClientIds.has(c.id) ? (
+                          <div className="group relative inline-flex items-center" tabIndex={0}>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              disabled
+                              aria-disabled
+                            >
+                              Supprimer
+                            </Button>
+                            <span
+                              role="tooltip"
+                              className="pointer-events-none absolute bottom-full right-0 z-[60] mb-2 w-64 rounded-md border border-primary/30 bg-primary px-3 py-2 text-left text-xs leading-relaxed text-primary-foreground opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                            >
+                              {cannotDeleteTooltip}
+                            </span>
+                          </div>
+                        ) : (
+                          <DeleteClientDialog
+                            clientId={c.id}
+                            clientName={c.name}
+                            onDeleted={() => {
+                              void (async () => {
+                                await load();
+                                router.push("/clients?deleted=1");
+                              })();
+                            }}
+                          />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : null}
     </div>
   );

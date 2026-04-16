@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -68,6 +68,7 @@ export function CreateInvoiceForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   const [clientOptions, setClientOptions] = useState<{ id: string; name: string }[]>([]);
   const [services, setServices] = useState<ServiceDto[]>([]);
@@ -124,6 +125,11 @@ export function CreateInvoiceForm() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   function addLine() {
     setLines((prev) => [
@@ -266,7 +272,7 @@ export function CreateInvoiceForm() {
       ) : null}
 
       {error ? (
-        <Alert variant="destructive" id={errId} className="mb-4" role="alert">
+        <Alert variant="destructive" id={errId} className="mb-4" role="alert" ref={errorRef}>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -323,26 +329,28 @@ export function CreateInvoiceForm() {
               return (
                 <div
                   key={line.key}
-                  className="relative rounded-md border border-border bg-card p-3"
+                  className="rounded-md border border-border bg-card p-3"
                   aria-label={`Ligne ${index + 1}`}
                 >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-2 h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                    onClick={() => removeLine(index)}
-                    disabled={saving || lines.length <= 1}
-                    aria-label={`Retirer la ligne ${index + 1}`}
-                    title={
-                      lines.length <= 1 ? "Au moins une ligne est requise." : "Retirer la ligne"
-                    }
-                  >
-                    <span aria-hidden="true" className="text-lg leading-none">
-                      ×
-                    </span>
-                  </Button>
-
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-foreground">Ligne {index + 1}</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                      onClick={() => removeLine(index)}
+                      disabled={saving || lines.length <= 1}
+                      aria-label={`Retirer la ligne ${index + 1}`}
+                      title={
+                        lines.length <= 1 ? "Au moins une ligne est requise." : "Retirer la ligne"
+                      }
+                    >
+                      <span aria-hidden="true" className="text-lg leading-none">
+                        ×
+                      </span>
+                    </Button>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
                     <div className="grid gap-2 sm:col-span-5">
                       <Label htmlFor={`${formId}-svc-${index}`}>Prestation</Label>

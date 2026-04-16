@@ -23,6 +23,19 @@ The browser calls the **FreelanceFlow Nest API** directly with `fetch` and `cred
 - Configure the API root with `NEXT_PUBLIC_API_URL` (see [`.env.example`](./.env.example)). Default: `http://localhost:3001/api/v1`.
 - The SPA stores the JWT access token in `localStorage` and mirrors it in a **non-HttpOnly** cookie `ff_access_token` so Next.js middleware can gate routes; use a stricter strategy in production if you move to a BFF.
 
+## export-schema=v1 (CSV exports)
+
+### Invoice export schema (invoice-export-schema=v1)
+
+- **Encoding**: UTF-8 **with BOM** (Excel-friendly)
+- **Delimiter**: `;`
+- **Newlines**: `CRLF` (`\r\n`)
+- **Decimals**: exported **as received from the API** (no client-side recomputation). For now, the frontend dumps the JSON values as strings; typical format is fixed decimal with `.` (e.g. `120.00`).
+
+**Columns (in order)**:
+
+`id`, `numéro_facture`, `nom_client`, `société_client`, `statut`, `date_émission`, `date_échéance`, `devise`, `totalHT`, `totalTVA`, `totalTTC`, `créé_le`, `mis_à_jour_le`
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
