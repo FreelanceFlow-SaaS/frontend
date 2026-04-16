@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,6 +45,11 @@ export function SendInvoiceEmailDialog({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recipients = useMemo(() => parseRecipients(toRaw), [toRaw]);
+
+  useEffect(() => {
+    if (!defaultRecipient) return;
+    setToRaw((current) => (current.trim().length === 0 ? defaultRecipient : current));
+  }, [defaultRecipient]);
 
   async function handleSend() {
     setError(null);
@@ -97,6 +102,20 @@ export function SendInvoiceEmailDialog({
             onChange={(e) => setToRaw(e.target.value)}
             disabled={sending}
           />
+          {defaultRecipient ? (
+            <div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto px-0 text-xs"
+                disabled={sending}
+                onClick={() => setToRaw(defaultRecipient)}
+              >
+                Utiliser l&apos;email du client ({defaultRecipient})
+              </Button>
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             Séparez plusieurs adresses avec une virgule, un point-virgule ou un retour ligne.
           </p>
