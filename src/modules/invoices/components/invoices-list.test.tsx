@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { Suspense } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { InvoicesList } from "@/modules/invoices/components/invoices-list";
 
@@ -46,6 +46,8 @@ const baseInvoice = {
 
 describe("InvoicesList", () => {
   const originalFetch = global.fetch;
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,6 +55,8 @@ describe("InvoicesList", () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
   it("shows empty state when API returns no invoices", async () => {
@@ -87,6 +91,36 @@ describe("InvoicesList", () => {
       );
     });
     expect(screen.getByText("Acme")).toBeInTheDocument();
+  });
+
+  it("exports invoices as CSV when clicking the button", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify([baseInvoice]),
+    } as Response);
+
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    URL.createObjectURL = vi.fn(() => "blob:invoices") as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as unknown as typeof URL.revokeObjectURL;
+
+    const view = renderInvoicesList();
+
+    await waitFor(() => {
+      expect(
+        within(view.container).getByRole("button", { name: /exporter csv/i }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(within(view.container).getByRole("button", { name: /exporter csv/i }));
+
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1);
+
+    clickSpy.mockRestore();
   });
 
   it("changes sort mode via select", async () => {
