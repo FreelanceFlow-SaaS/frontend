@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LogoUpload } from "@/components/profile/logo-upload";
+import { getApiBaseUrl } from "@/lib/api/base-url";
 
 vi.mock("@/lib/auth/session", () => ({
   getAccessTokenFromStorage: vi.fn(() => "test-token"),
@@ -105,7 +106,7 @@ describe("LogoUpload", () => {
 
     render(
       <LogoUpload
-        currentLogoUrl="http://localhost:3001/api/v1/users/profile/logo?v=1"
+        currentLogoUrl={`${getApiBaseUrl()}/users/profile/logo?v=1`}
         onUploaded={onUploaded}
       />,
     );
@@ -160,7 +161,7 @@ describe("LogoUpload", () => {
     const { uploadInvoiceLogo } = await import("@/lib/api/profile-api");
     vi.mocked(uploadInvoiceLogo).mockResolvedValue({
       logoStorageKey: "logos/resized.png",
-      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z",
+      logoUrl: `${getApiBaseUrl()}/users/profile/logo?v=2026-04-16T10:00:00Z`,
       logoUpdatedAt: "2026-04-16T10:00:00Z",
     });
 
@@ -193,7 +194,7 @@ describe("LogoUpload", () => {
     const { uploadInvoiceLogo } = await import("@/lib/api/profile-api");
     vi.mocked(uploadInvoiceLogo).mockResolvedValue({
       logoStorageKey: "logos/abc.png",
-      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z",
+      logoUrl: `${getApiBaseUrl()}/users/profile/logo?v=2026-04-16T10:00:00Z`,
       logoUpdatedAt: "2026-04-16T10:00:00Z",
     });
 
@@ -218,7 +219,7 @@ describe("LogoUpload", () => {
     expect(uploadInvoiceLogo).toHaveBeenCalledWith("test-token", file);
     expect(onUploaded).toHaveBeenCalledWith({
       logoStorageKey: "logos/abc.png",
-      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z",
+      logoUrl: `${getApiBaseUrl()}/users/profile/logo?v=2026-04-16T10:00:00Z`,
       logoUpdatedAt: "2026-04-16T10:00:00Z",
     });
   });
@@ -247,7 +248,7 @@ describe("LogoUpload", () => {
     const { uploadInvoiceLogo } = await import("@/lib/api/profile-api");
     vi.mocked(uploadInvoiceLogo).mockResolvedValue({
       logoStorageKey: "logos/new.png",
-      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T11:00:00Z",
+      logoUrl: `${getApiBaseUrl()}/users/profile/logo?v=2026-04-16T11:00:00Z`,
       logoUpdatedAt: "2026-04-16T11:00:00Z",
     });
 
@@ -260,7 +261,7 @@ describe("LogoUpload", () => {
     const user = userEvent.setup();
     render(
       <LogoUpload
-        currentLogoUrl="http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z"
+        currentLogoUrl={`${getApiBaseUrl()}/users/profile/logo?v=2026-04-16T10:00:00Z`}
         onUploaded={onUploaded}
       />,
     );
