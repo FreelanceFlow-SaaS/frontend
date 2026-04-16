@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/shared/money-display";
@@ -61,6 +61,7 @@ export function InvoicesList() {
   const [sortMode, setSortMode] = useState<SortMode>("date");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const created = searchParams.get("created");
@@ -95,6 +96,11 @@ export function InvoicesList() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!error && !exportError) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error, exportError]);
+
   const sorted = useMemo(() => {
     if (!invoices) return [];
     return sortInvoices(invoices, sortMode);
@@ -124,7 +130,7 @@ export function InvoicesList() {
   }, [invoices]);
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Factures</h1>
@@ -171,13 +177,18 @@ export function InvoicesList() {
       ) : null}
 
       {error ? (
-        <Alert variant="destructive" className="mb-6" role="alert">
+        <Alert ref={errorRef} variant="destructive" className="mb-6" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       {exportError ? (
-        <Alert variant="destructive" className="mb-6" role="alert">
+        <Alert
+          ref={!error ? errorRef : undefined}
+          variant="destructive"
+          className="mb-6"
+          role="alert"
+        >
           <AlertDescription>{exportError}</AlertDescription>
         </Alert>
       ) : null}
@@ -197,59 +208,88 @@ export function InvoicesList() {
       ) : null}
 
       {!loading && !error && sorted.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[40rem] text-left text-sm">
-            <caption className="sr-only">Liste de vos factures</caption>
-            <thead className="border-b border-border bg-muted/50">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  Numéro
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  Client
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  Émission
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium text-foreground">
-                  Statut
-                </th>
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-right font-medium text-foreground tabular-nums"
-                >
-                  TTC
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((inv) => (
-                <tr key={inv.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/factures/${inv.id}`}
-                      className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      {inv.invoiceNumber}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{inv.client.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground tabular-nums">
+        <>
+          <div className="space-y-3 md:hidden">
+            {sorted.map((inv) => (
+              <article key={inv.id} className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">{inv.invoiceNumber}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{inv.client.name}</p>
+                  </div>
+                  <span className="inline-flex rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground">
+                    {invoiceStatusLabel(inv.status)}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
                     {new Date(inv.issueDate).toLocaleDateString("fr-FR")}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground">
-                      {invoiceStatusLabel(inv.status)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <MoneyDisplay amount={inv.totalTtc} />
-                  </td>
+                  </span>
+                  <MoneyDisplay amount={inv.totalTtc} />
+                </div>
+                <div className="mt-3">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/factures/${inv.id}`}>Voir la facture</Link>
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
+            <table className="w-full min-w-[40rem] text-left text-sm">
+              <caption className="sr-only">Liste de vos factures</caption>
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    Numéro
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    Client
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    Émission
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-foreground">
+                    Statut
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-4 py-3 text-right font-medium text-foreground tabular-nums"
+                  >
+                    TTC
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {sorted.map((inv) => (
+                  <tr key={inv.id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/factures/${inv.id}`}
+                        className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        {inv.invoiceNumber}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{inv.client.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground tabular-nums">
+                      {new Date(inv.issueDate).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground">
+                        {invoiceStatusLabel(inv.status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <MoneyDisplay amount={inv.totalTtc} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : null}
     </div>
   );

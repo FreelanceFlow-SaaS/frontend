@@ -85,12 +85,10 @@ describe("InvoicesList", () => {
     renderInvoicesList();
 
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: /ff-2026-0001/i })).toHaveAttribute(
-        "href",
-        "/factures/i1",
-      );
+      const links = screen.getAllByRole("link", { name: /ff-2026-0001/i });
+      expect(links.some((link) => link.getAttribute("href") === "/factures/i1")).toBe(true);
     });
-    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getAllByText("Acme").length).toBeGreaterThan(0);
   });
 
   it("exports invoices as CSV when clicking the button", async () => {
@@ -141,7 +139,7 @@ describe("InvoicesList", () => {
     renderInvoicesList();
 
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: /ff-2026-0002/i })).toBeInTheDocument();
+      expect(screen.getAllByRole("link", { name: /ff-2026-0002/i }).length).toBeGreaterThan(0);
     });
 
     await user.selectOptions(screen.getByLabelText(/trier par/i), "status");

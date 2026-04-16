@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -55,6 +55,7 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
   const [loading, setLoading] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (mode !== "edit" || !serviceId) return;
@@ -83,6 +84,11 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
       cancelled = true;
     };
   }, [mode, serviceId]);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -151,7 +157,7 @@ export function ServiceForm({ mode, serviceId }: ServiceFormProps) {
       </div>
 
       {error ? (
-        <Alert variant="destructive" id={errorId} className="mb-4" role="alert">
+        <Alert ref={errorRef} variant="destructive" id={errorId} className="mb-4" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

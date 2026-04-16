@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +55,7 @@ export function ProfileForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const token = getAccessTokenFromStorage();
@@ -82,6 +83,11 @@ export function ProfileForm() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   function field<K extends keyof FreelancerProfileDto>(
     key: K,
@@ -176,7 +182,7 @@ export function ProfileForm() {
       />
 
       {error ? (
-        <Alert variant="destructive" id={errorId} role="alert">
+        <Alert ref={errorRef} variant="destructive" id={errorId} role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

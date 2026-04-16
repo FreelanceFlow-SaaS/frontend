@@ -66,11 +66,9 @@ describe("ServicesList", () => {
     renderServicesList();
 
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: /^développement$/i })).toHaveAttribute(
-        "href",
-        "/prestations/s1/edit",
-      );
+      const links = screen.getAllByRole("link", { name: /^développement$/i });
+      expect(links.some((link) => link.getAttribute("href") === "/prestations/s1/edit")).toBe(true);
     });
-    expect(screen.getByText(/120[,\s\u00a0]00\s*€/)).toBeInTheDocument();
+    expect(screen.getAllByText(/120[,\s\u00a0]00\s*€/).length).toBeGreaterThan(0);
   });
 });
