@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { MoneyDisplay } from "@/components/shared/money-display";
 import { DeleteInvoiceDialog } from "@/modules/invoices/components/delete-invoice-dialog";
 import { InvoiceLinesEditor } from "@/modules/invoices/components/invoice-lines-editor";
+import { SendInvoiceEmailDialog } from "@/modules/invoices/components/send-invoice-email-dialog";
 import { InvoiceStatusActions } from "@/modules/invoices/components/invoice-status-actions";
 import { InvoicePdfActions } from "@/modules/invoices/components/invoice-pdf-actions";
 import { InvoiceTotalsPanel } from "@/modules/invoices/components/invoice-totals-panel";
@@ -297,6 +298,23 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         </div>
 
         <div className="flex flex-col gap-6">
+          <section className="rounded-lg border border-border bg-muted/20 p-4">
+            <h2 className="text-sm font-semibold text-foreground">Envoi email</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Envoi asynchrone: la demande est acceptée puis traitée par le service d&apos;email.
+            </p>
+            <div className="mt-3">
+              <SendInvoiceEmailDialog
+                invoiceId={invoice.id}
+                invoiceNumber={invoice.invoiceNumber}
+                defaultRecipient={invoice.client.email}
+                onSent={() => {
+                  setNotice("Demande d'envoi acceptée. Livraison en cours de traitement.");
+                  setError(null);
+                }}
+              />
+            </div>
+          </section>
           <InvoiceTotalsPanel
             totalHt={invoice.totalHt}
             totalVat={invoice.totalVat}

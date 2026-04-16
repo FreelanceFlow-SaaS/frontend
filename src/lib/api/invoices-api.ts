@@ -66,6 +66,12 @@ export type UpdateInvoicePayload = {
   currency?: string;
 };
 
+export type SendInvoiceEmailPayload = {
+  to: string[];
+  subject: string;
+  body: string;
+};
+
 async function parseJson(res: Response): Promise<unknown> {
   const text = await res.text();
   if (!text) return null;
@@ -217,4 +223,31 @@ export async function deleteInvoice(accessToken: string, id: string): Promise<vo
   if (res.status === 204) return;
   const body = await parseJson(res);
   throw new Error(mapApiErrorToMessage(body, "Impossible de supprimer la facture."));
+}
+
+export async function sendInvoiceEmail(
+  accessToken: string,
+  id: string,
+  payload: SendInvoiceEmailPayload,
+): Promise<{ jobId: string; status: string; message: string }> {
+  const res = await fetch(`${getApiBaseUrl()}/invoices/${encodeURIComponent(id)}/send-email`, {
+    method: "POST",
+    credentials: "include",
+    headers: { ...authHeaders(accessToken), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await parseJson(res);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error("Session expirée.");
+  }
+  if (!res.ok) {
+    throw new Error(
+      mapApiErrorToMessage(
+        body,
+        "L'envoi de la facture a échoué. Vérifiez les destinataires et réessayez.",
+      ),
+    );
+  }
+  return body as { jobId: string; status: string; message: string };
 }
