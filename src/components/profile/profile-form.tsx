@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LogoUpload } from "@/components/profile/logo-upload";
 import {
   fetchSellerProfile,
   patchSellerProfile,
@@ -49,6 +50,7 @@ export function ProfileForm() {
   const successId = `${formId}-success`;
 
   const [values, setValues] = useState<FreelancerProfileDto>(emptyForm());
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export function ProfileForm() {
         const user = await fetchSellerProfile(token);
         if (!cancelled) {
           setValues(fromProfile(user.profile));
+          setLogoUrl(user.profile?.logoUrl ?? null);
         }
       } catch (e) {
         if (!cancelled) {
@@ -164,6 +167,13 @@ export function ProfileForm() {
           Ces informations peuvent apparaître sur vos factures et PDF.
         </p>
       </div>
+
+      <LogoUpload
+        currentLogoUrl={logoUrl}
+        onUploaded={(next) => {
+          if (typeof next.logoUrl === "string") setLogoUrl(next.logoUrl);
+        }}
+      />
 
       {error ? (
         <Alert variant="destructive" id={errorId} role="alert">
