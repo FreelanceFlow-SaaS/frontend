@@ -39,10 +39,12 @@ function stubImageLoading(width = 200, height = 200) {
 describe("LogoUpload", () => {
   let restoreImage: () => void;
   const onUploaded = vi.fn();
+  const originalFetch = global.fetch;
 
   beforeEach(() => {
     vi.clearAllMocks();
     restoreImage = stubImageLoading();
+    global.fetch = vi.fn();
     URL.createObjectURL = vi.fn(() => "blob:preview");
     URL.revokeObjectURL = vi.fn();
 
@@ -52,7 +54,7 @@ describe("LogoUpload", () => {
         ({
           drawImage: vi.fn(),
         }) as unknown as CanvasRenderingContext2D,
-    );
+    ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
     HTMLCanvasElement.prototype.toBlob = vi.fn((callback: BlobCallback) => {
       callback(new Blob(["x"], { type: "image/png" }));
@@ -60,9 +62,17 @@ describe("LogoUpload", () => {
 
     // Stub FileReader for data URL preview caching
     class FakeFileReader {
+      // Minimal shape to satisfy TypeScript when used as FileReader.
+      error: DOMException | null = null;
+      readyState = 2;
+      abort() {}
       result: string | ArrayBuffer | null = null;
-      onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null = null;
-      onerror: ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null = null;
+      onload: ((ev: ProgressEvent<FileReader>) => void) | null = null;
+      onerror: ((ev: ProgressEvent<FileReader>) => void) | null = null;
+      onabort: ((ev: ProgressEvent<FileReader>) => void) | null = null;
+      onloadend: ((ev: ProgressEvent<FileReader>) => void) | null = null;
+      onloadstart: ((ev: ProgressEvent<FileReader>) => void) | null = null;
+      onprogress: ((ev: ProgressEvent<FileReader>) => void) | null = null;
       readAsDataURL() {
         this.result = "data:image/png;base64,TEST";
         const ev = new ProgressEvent("load") as ProgressEvent<FileReader>;
@@ -75,6 +85,7 @@ describe("LogoUpload", () => {
   afterEach(() => {
     cleanup();
     restoreImage();
+    global.fetch = originalFetch;
   });
 
   it("renders heading, help text and file input", () => {
@@ -85,11 +96,25 @@ describe("LogoUpload", () => {
     expect(screen.getByText("Aucun logo")).toBeInTheDocument();
   });
 
-  it("shows preview when currentLogoUrl is provided", () => {
-    render(<LogoUpload currentLogoUrl="https://example.com/logo.png" onUploaded={onUploaded} />);
-    const img = screen.getByAltText("Aperçu du logo");
-    expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute("src", "https://example.com/logo.png");
+  it("loads preview by calling backend logo route when currentLogoUrl is provided", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(["x"], { type: "image/png" }),
+    } as Response);
+
+    render(
+      <LogoUpload
+        currentLogoUrl="http://localhost:3001/api/v1/users/profile/logo?v=1"
+        onUploaded={onUploaded}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByAltText("Aperçu du logo")).toBeInTheDocument();
+    });
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(screen.getByAltText("Aperçu du logo")).toHaveAttribute("src", "blob:preview");
     expect(screen.getByRole("button", { name: /remplacer le logo/i })).toBeInTheDocument();
   });
 
@@ -135,9 +160,15 @@ describe("LogoUpload", () => {
     const { uploadInvoiceLogo } = await import("@/lib/api/profile-api");
     vi.mocked(uploadInvoiceLogo).mockResolvedValue({
       logoStorageKey: "logos/resized.png",
-      logoUrl: "http://localhost:3001/uploads/logos/resized.png",
+      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z",
       logoUpdatedAt: "2026-04-16T10:00:00Z",
     });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(["x"], { type: "image/png" }),
+    } as Response);
 
     const user = userEvent.setup();
     render(<LogoUpload currentLogoUrl={null} onUploaded={onUploaded} />);
@@ -162,9 +193,15 @@ describe("LogoUpload", () => {
     const { uploadInvoiceLogo } = await import("@/lib/api/profile-api");
     vi.mocked(uploadInvoiceLogo).mockResolvedValue({
       logoStorageKey: "logos/abc.png",
-      logoUrl: "http://localhost:3001/uploads/logos/abc.png",
+      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z",
       logoUpdatedAt: "2026-04-16T10:00:00Z",
     });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(["x"], { type: "image/png" }),
+    } as Response);
 
     const user = userEvent.setup();
     render(<LogoUpload currentLogoUrl={null} onUploaded={onUploaded} />);
@@ -181,7 +218,7 @@ describe("LogoUpload", () => {
     expect(uploadInvoiceLogo).toHaveBeenCalledWith("test-token", file);
     expect(onUploaded).toHaveBeenCalledWith({
       logoStorageKey: "logos/abc.png",
-      logoUrl: "data:image/png;base64,TEST",
+      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z",
       logoUpdatedAt: "2026-04-16T10:00:00Z",
     });
   });
@@ -210,22 +247,27 @@ describe("LogoUpload", () => {
     const { uploadInvoiceLogo } = await import("@/lib/api/profile-api");
     vi.mocked(uploadInvoiceLogo).mockResolvedValue({
       logoStorageKey: "logos/new.png",
-      logoUrl: "http://localhost:3001/uploads/logos/new.png",
+      logoUrl: "http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T11:00:00Z",
       logoUpdatedAt: "2026-04-16T11:00:00Z",
     });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(["x"], { type: "image/png" }),
+    } as Response);
 
     const user = userEvent.setup();
     render(
       <LogoUpload
-        currentLogoUrl="http://localhost:3001/uploads/logos/old.png"
+        currentLogoUrl="http://localhost:3001/api/v1/users/profile/logo?v=2026-04-16T10:00:00Z"
         onUploaded={onUploaded}
       />,
     );
 
-    expect(screen.getByAltText("Aperçu du logo")).toHaveAttribute(
-      "src",
-      "http://localhost:3001/uploads/logos/old.png",
-    );
+    await waitFor(() => {
+      expect(screen.getByAltText("Aperçu du logo")).toBeInTheDocument();
+    });
 
     const input = screen.getByLabelText(/sélectionner un fichier logo/i);
     const file = createFile("new-logo.webp", 100_000, "image/webp");
@@ -236,9 +278,6 @@ describe("LogoUpload", () => {
       expect(screen.getByText(/logo enregistré/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByAltText("Aperçu du logo")).toHaveAttribute(
-      "src",
-      "data:image/png;base64,TEST",
-    );
+    expect(screen.getByAltText("Aperçu du logo")).toHaveAttribute("src", "blob:preview");
   });
 });

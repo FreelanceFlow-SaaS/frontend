@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api/api-fetch";
 import { uploadInvoiceLogo } from "@/lib/api/profile-api";
 import { getAccessTokenFromStorage, redirectToLogin } from "@/lib/auth/session";
 
@@ -99,18 +100,93 @@ export interface LogoUploadProps {
 
 export function LogoUpload({ currentLogoUrl, onUploaded }: LogoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(currentLogoUrl);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const remotePreviewUrlRef = useRef<string | null>(null);
+  const isLocalPreviewRef = useRef(false);
 
-  // Keep preview in sync when parent passes a new URL (e.g. after profile fetch).
-  // We use a ref to track the last prop-driven URL to avoid clobbering local preview.
-  const lastPropUrl = useRef(currentLogoUrl);
-  if (currentLogoUrl !== lastPropUrl.current) {
-    lastPropUrl.current = currentLogoUrl;
-    setPreviewUrl(currentLogoUrl);
+  async function loadRemotePreview(url: string, accessToken: string): Promise<void> {
+    // Release previously created blob URL (remote previews only).
+    if (remotePreviewUrlRef.current) {
+      URL.revokeObjectURL(remotePreviewUrlRef.current);
+      remotePreviewUrlRef.current = null;
+    }
+
+    const res = await apiFetch(url, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (res.status === 404) {
+      setPreviewUrl(null);
+      return;
+    }
+    if (!res.ok) {
+      throw new Error("Impossible de charger le logo.");
+    }
+
+    const contentType = res.headers?.get?.("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const text = await res.clone().text();
+      // Some environments serialize Nest StreamableFile to JSON instead of streaming bytes.
+      // Surface a clear error instead of creating a blob from JSON.
+      try {
+        const parsed = JSON.parse(text) as { stream?: { path?: unknown } };
+        const p = parsed?.stream?.path;
+        if (typeof p === "string" && p.includes("/uploads/logos/")) {
+          setPreviewUrl(null);
+          throw new Error(
+            "Le serveur renvoie un JSON au lieu de l’image du logo. Correction requise côté API.",
+          );
+        }
+      } catch {
+        // If JSON parsing fails, we'll continue and let blob() logic handle it.
+      }
+    }
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    remotePreviewUrlRef.current = objectUrl;
+    setPreviewUrl(objectUrl);
   }
+
+  useEffect(() => {
+    if (!currentLogoUrl) {
+      setPreviewUrl(null);
+      return;
+    }
+    if (isLocalPreviewRef.current) return;
+
+    const token = getAccessTokenFromStorage();
+    if (!token) {
+      redirectToLogin();
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await loadRemotePreview(currentLogoUrl, token);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Impossible de charger le logo.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentLogoUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (remotePreviewUrlRef.current) {
+        URL.revokeObjectURL(remotePreviewUrlRef.current);
+        remotePreviewUrlRef.current = null;
+      }
+    };
+  }, []);
 
   async function handleFile(file: File) {
     setError(null);
@@ -138,6 +214,7 @@ export function LogoUpload({ currentLogoUrl, onUploaded }: LogoUploadProps) {
     }
 
     const localPreview = URL.createObjectURL(fileToUpload);
+    isLocalPreviewRef.current = true;
     setPreviewUrl(localPreview);
 
     const token = getAccessTokenFromStorage();
@@ -149,14 +226,27 @@ export function LogoUpload({ currentLogoUrl, onUploaded }: LogoUploadProps) {
     setUploading(true);
     try {
       const result = await uploadInvoiceLogo(token, fileToUpload);
-      if (result.logoUrl) {
-        setPreviewUrl(result.logoUrl);
-      }
       onUploaded(result);
+      if (result.logoUrl) {
+        isLocalPreviewRef.current = false;
+        await loadRemotePreview(result.logoUrl, token);
+      } else {
+        isLocalPreviewRef.current = false;
+      }
       setSuccess("Logo enregistré.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Envoi du logo impossible.");
-      setPreviewUrl(currentLogoUrl);
+      isLocalPreviewRef.current = false;
+      // Best effort: if a server URL exists, try reloading it.
+      if (currentLogoUrl) {
+        try {
+          await loadRemotePreview(currentLogoUrl, token);
+        } catch {
+          setPreviewUrl(null);
+        }
+      } else {
+        setPreviewUrl(null);
+      }
     } finally {
       setUploading(false);
       URL.revokeObjectURL(localPreview);

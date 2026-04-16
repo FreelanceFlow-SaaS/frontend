@@ -28,19 +28,25 @@ export type UserWithProfileResponse = {
   profile: FreelancerProfileDto | null;
 };
 
-function toApiOrigin(apiBaseUrl: string): string {
-  // `getApiBaseUrl()` includes `/api/v1`; for assets we usually need the origin.
-  const withoutTrailingSlash = apiBaseUrl.replace(/\/$/, "");
-  return withoutTrailingSlash.replace(/\/api\/v1$/, "");
-}
-
 function computeLogoUrl(profile: FreelancerProfileDto | null): string | null {
   if (!profile) return null;
-  if (typeof profile.logoUrl === "string" && profile.logoUrl) return profile.logoUrl;
-  if (typeof profile.logoStorageKey !== "string" || !profile.logoStorageKey) return null;
-  // Backend stores `logos/<filename>` under `uploads/`.
-  const origin = toApiOrigin(getApiBaseUrl());
-  return `${origin}/uploads/${profile.logoStorageKey}`;
+  // The backend exposes an authenticated route that streams the current logo:
+  // GET /api/v1/users/profile/logo
+  // We return that route (optionally cache-busted) so the frontend can fetch it with Authorization
+  // and display it via a blob URL.
+  const hasLogo =
+    (typeof profile.logoUrl === "string" && profile.logoUrl) ||
+    (typeof profile.logoStorageKey === "string" && profile.logoStorageKey);
+  if (!hasLogo) return null;
+
+  const v =
+    typeof profile.logoUpdatedAt === "string" && profile.logoUpdatedAt
+      ? profile.logoUpdatedAt
+      : typeof profile.logoStorageKey === "string"
+        ? profile.logoStorageKey
+        : "";
+  const qs = v ? `?v=${encodeURIComponent(v)}` : "";
+  return `${getApiBaseUrl()}/users/profile/logo${qs}`;
 }
 
 async function parseJson(res: Response): Promise<unknown> {
@@ -119,8 +125,7 @@ export async function uploadInvoiceLogo(
   const o = body as Record<string, unknown>;
   const logoStorageKey = typeof o.logoStorageKey === "string" ? o.logoStorageKey : null;
   const logoUpdatedAt = typeof o.logoUpdatedAt === "string" ? o.logoUpdatedAt : null;
-  const logoUrl = logoStorageKey
-    ? `${toApiOrigin(getApiBaseUrl())}/uploads/${logoStorageKey}`
-    : null;
+  const qs = logoUpdatedAt ? `?v=${encodeURIComponent(logoUpdatedAt)}` : "";
+  const logoUrl = logoStorageKey ? `${getApiBaseUrl()}/users/profile/logo${qs}` : null;
   return { logoStorageKey, logoUrl, logoUpdatedAt };
 }
