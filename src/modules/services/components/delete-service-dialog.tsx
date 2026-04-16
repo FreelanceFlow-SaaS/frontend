@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,6 +28,7 @@ export function DeleteServiceDialog({
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
 
   async function handleConfirm() {
     setError(null);
@@ -48,6 +49,11 @@ export function DeleteServiceDialog({
     }
   }
 
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -64,7 +70,7 @@ export function DeleteServiceDialog({
           </DialogDescription>
         </DialogHeader>
         {error ? (
-          <p className="text-sm text-destructive" role="alert">
+          <p ref={errorRef} className="text-sm text-destructive" role="alert">
             {error}
           </p>
         ) : null}

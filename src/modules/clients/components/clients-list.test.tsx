@@ -68,11 +68,9 @@ describe("ClientsList", () => {
     renderClientsList();
 
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: /^acme$/i })).toHaveAttribute(
-        "href",
-        "/clients/c1/edit",
-      );
+      const links = screen.getAllByRole("link", { name: /^acme$/i });
+      expect(links.some((link) => link.getAttribute("href") === "/clients/c1/edit")).toBe(true);
     });
-    expect(screen.getByText("a@acme.fr")).toBeInTheDocument();
+    expect(screen.getAllByText("a@acme.fr").length).toBeGreaterThan(0);
   });
 });

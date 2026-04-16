@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,6 +120,7 @@ export function InvoiceLinesEditor({ invoiceId, lines, onSaved }: InvoiceLinesEd
   const [loadingServices, setLoadingServices] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setRows(linesToRows(lines));
@@ -146,6 +147,11 @@ export function InvoiceLinesEditor({ invoiceId, lines, onSaved }: InvoiceLinesEd
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   const applyServiceToRow = useCallback(
     (index: number, serviceId: string) => {
@@ -231,7 +237,7 @@ export function InvoiceLinesEditor({ invoiceId, lines, onSaved }: InvoiceLinesEd
       </p>
 
       {error ? (
-        <Alert variant="destructive" role="alert">
+        <Alert variant="destructive" role="alert" ref={errorRef}>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,6 +19,7 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +37,11 @@ export function RegisterForm() {
     }
   }
 
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
+
   return (
     <form className="space-y-6" onSubmit={onSubmit} noValidate>
       <div className="space-y-2 text-center">
@@ -46,7 +52,7 @@ export function RegisterForm() {
       </div>
 
       {error ? (
-        <Alert variant="destructive" id={errorId} role="alert">
+        <Alert ref={errorRef} variant="destructive" id={errorId} role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
