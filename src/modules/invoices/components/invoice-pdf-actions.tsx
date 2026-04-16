@@ -22,11 +22,17 @@ export function InvoicePdfActions({ invoiceId, invoiceNumber }: InvoicePdfAction
   const [error, setError] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const announceRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!announce) return;
     announceRef.current?.focus();
   }, [announce]);
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   async function generateAndDownload() {
     setError(null);
@@ -83,7 +89,7 @@ export function InvoicePdfActions({ invoiceId, invoiceNumber }: InvoicePdfAction
       </div>
 
       {error ? (
-        <Alert variant="destructive" className="mt-3" role="alert">
+        <Alert ref={errorRef} variant="destructive" className="mt-3" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ACCESS_TOKEN_COOKIE_NAME } from "@/lib/auth/constants";
 
 const PROTECTED_PREFIXES = ["/factures", "/clients", "/prestations", "/profil-vendeur"];
 
@@ -12,14 +11,14 @@ export function middleware(request: NextRequest) {
   if (!isProtected) {
     return NextResponse.next();
   }
-
-  const token = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)?.value;
-  if (!token) {
-    const login = new URL("/login", request.url);
-    login.searchParams.set("from", pathname);
-    return NextResponse.redirect(login);
-  }
-
+  /**
+   * We deliberately avoid cookie-based auth gating in middleware.
+   *
+   * The app uses a client-managed access token (localStorage) and handles 401
+   * centrally (redirect + clear session). Relying on a non-HttpOnly cookie here
+   * can cause false negatives during client-side navigations (leading to an
+   * immediate redirect loop back to /login).
+   */
   return NextResponse.next();
 }
 

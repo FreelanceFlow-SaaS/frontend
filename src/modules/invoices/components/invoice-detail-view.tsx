@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { MoneyDisplay } from "@/components/shared/money-display";
 import { DeleteInvoiceDialog } from "@/modules/invoices/components/delete-invoice-dialog";
 import { InvoiceLinesEditor } from "@/modules/invoices/components/invoice-lines-editor";
+import { SendInvoiceEmailDialog } from "@/modules/invoices/components/send-invoice-email-dialog";
 import { InvoiceStatusActions } from "@/modules/invoices/components/invoice-status-actions";
 import { InvoicePdfActions } from "@/modules/invoices/components/invoice-pdf-actions";
 import { InvoiceTotalsPanel } from "@/modules/invoices/components/invoice-totals-panel";
@@ -42,6 +43,7 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
     const token = getAccessTokenFromStorage();
@@ -77,6 +79,11 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
     }
   }, [searchParams, router, invoiceId]);
 
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
+
   async function saveMetadata(e: React.FormEvent) {
     e.preventDefault();
     const token = getAccessTokenFromStorage();
@@ -98,12 +105,12 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
   }
 
   if (loading) {
-    return <p className="p-8 text-sm text-muted-foreground">Chargement de la facture…</p>;
+    return <p className="p-4 text-sm text-muted-foreground sm:p-8">Chargement de la facture…</p>;
   }
 
   if (error && !invoice) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <Alert variant="destructive" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -120,7 +127,7 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
   const sortedLines = [...invoice.lines].sort((a, b) => a.lineOrder - b.lineOrder);
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-6">
         <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2">
           <Link href="/factures">← Factures</Link>
@@ -159,7 +166,7 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
       ) : null}
 
       {error ? (
-        <Alert variant="destructive" className="mb-6" role="alert">
+        <Alert ref={errorRef} variant="destructive" className="mb-6" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -297,6 +304,23 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         </div>
 
         <div className="flex flex-col gap-6">
+          <section className="rounded-lg border border-border bg-muted/20 p-4">
+            <h2 className="text-sm font-semibold text-foreground">Envoi email</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Envoi asynchrone: la demande est acceptée puis traitée par le service d&apos;email.
+            </p>
+            <div className="mt-3">
+              <SendInvoiceEmailDialog
+                invoiceId={invoice.id}
+                invoiceNumber={invoice.invoiceNumber}
+                defaultRecipient={invoice.client.email}
+                onSent={() => {
+                  setNotice("Demande d'envoi acceptée. Livraison en cours de traitement.");
+                  setError(null);
+                }}
+              />
+            </div>
+          </section>
           <InvoiceTotalsPanel
             totalHt={invoice.totalHt}
             totalVat={invoice.totalVat}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -74,6 +74,7 @@ export function InvoiceStatusActions({ invoice, onUpdated }: InvoiceStatusAction
   const [pending, setPending] = useState<TransitionOption | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
 
   function openDialog(opt: TransitionOption) {
     setPending(opt);
@@ -101,6 +102,11 @@ export function InvoiceStatusActions({ invoice, onUpdated }: InvoiceStatusAction
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!error) return;
+    errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   return (
     <>
@@ -152,7 +158,7 @@ export function InvoiceStatusActions({ invoice, onUpdated }: InvoiceStatusAction
             <DialogDescription>{pending?.description}</DialogDescription>
           </DialogHeader>
           {error ? (
-            <p className="text-sm text-destructive" role="alert">
+            <p ref={errorRef} className="text-sm text-destructive" role="alert">
               {error}
             </p>
           ) : null}
