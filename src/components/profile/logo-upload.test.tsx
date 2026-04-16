@@ -12,11 +12,7 @@ vi.mock("@/lib/api/profile-api", () => ({
   uploadInvoiceLogo: vi.fn(),
 }));
 
-function createFile(
-  name: string,
-  sizeBytes: number,
-  type = "image/png",
-): File {
+function createFile(name: string, sizeBytes: number, type = "image/png"): File {
   const buf = new ArrayBuffer(sizeBytes);
   return new File([buf], name, { type });
 }
@@ -58,11 +54,9 @@ describe("LogoUpload", () => {
         }) as unknown as CanvasRenderingContext2D,
     );
 
-    HTMLCanvasElement.prototype.toBlob = vi.fn(
-      (callback: BlobCallback) => {
-        callback(new Blob(["x"], { type: "image/png" }));
-      },
-    );
+    HTMLCanvasElement.prototype.toBlob = vi.fn((callback: BlobCallback) => {
+      callback(new Blob(["x"], { type: "image/png" }));
+    });
 
     // Stub FileReader for data URL preview caching
     class FakeFileReader {
@@ -92,9 +86,7 @@ describe("LogoUpload", () => {
   });
 
   it("shows preview when currentLogoUrl is provided", () => {
-    render(
-      <LogoUpload currentLogoUrl="https://example.com/logo.png" onUploaded={onUploaded} />,
-    );
+    render(<LogoUpload currentLogoUrl="https://example.com/logo.png" onUploaded={onUploaded} />);
     const img = screen.getByAltText("Aperçu du logo");
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute("src", "https://example.com/logo.png");

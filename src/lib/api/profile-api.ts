@@ -91,7 +91,11 @@ export async function patchSellerProfile(
 export async function uploadInvoiceLogo(
   accessToken: string,
   file: File,
-): Promise<{ logoStorageKey?: string | null; logoUrl?: string | null; logoUpdatedAt?: string | null }> {
+): Promise<{
+  logoStorageKey?: string | null;
+  logoUrl?: string | null;
+  logoUpdatedAt?: string | null;
+}> {
   const form = new FormData();
   // Backend expects Nest `FileInterceptor('logo')`.
   form.append("logo", file);
@@ -115,6 +119,8 @@ export async function uploadInvoiceLogo(
   const o = body as Record<string, unknown>;
   const logoStorageKey = typeof o.logoStorageKey === "string" ? o.logoStorageKey : null;
   const logoUpdatedAt = typeof o.logoUpdatedAt === "string" ? o.logoUpdatedAt : null;
-  const logoUrl = logoStorageKey ? `${toApiOrigin(getApiBaseUrl())}/uploads/${logoStorageKey}` : null;
+  const logoUrl = logoStorageKey
+    ? `${toApiOrigin(getApiBaseUrl())}/uploads/${logoStorageKey}`
+    : null;
   return { logoStorageKey, logoUrl, logoUpdatedAt };
 }
