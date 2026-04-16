@@ -19,9 +19,12 @@ type RevenueByMonth = {
   totalTtc: string;
 };
 
-function monthLabel(yearMonth: string): string {
+function monthLabel(yearMonth?: string): string {
+  if (!yearMonth || typeof yearMonth !== "string") return "Mois inconnu";
   const [year, month] = yearMonth.split("-");
+  if (!year || !month) return "Mois inconnu";
   const date = new Date(Number(year), Number(month) - 1, 1);
+  if (Number.isNaN(date.getTime())) return "Mois inconnu";
   return new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(date);
 }
 
@@ -106,8 +109,15 @@ export function DashboardView() {
   }, [load]);
 
   const fallbackBreakdowns = useMemo(() => computeBreakdowns(invoices), [invoices]);
-  const revenueByClient = summary?.revenueByClient ?? fallbackBreakdowns.revenueByClient;
-  const revenueByMonth = summary?.revenueByMonth ?? fallbackBreakdowns.revenueByMonth;
+  const summaryRevenueByClient =
+    summary?.revenueByClient?.filter((row) => Boolean(row?.clientId && row?.label)) ?? [];
+  const summaryRevenueByMonth =
+    summary?.revenueByMonth?.filter((row) => Boolean(row?.yearMonth)) ?? [];
+
+  const revenueByClient =
+    summaryRevenueByClient.length > 0 ? summaryRevenueByClient : fallbackBreakdowns.revenueByClient;
+  const revenueByMonth =
+    summaryRevenueByMonth.length > 0 ? summaryRevenueByMonth : fallbackBreakdowns.revenueByMonth;
 
   return (
     <div className="p-8">
